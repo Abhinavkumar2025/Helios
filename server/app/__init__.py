@@ -1,1 +1,0 @@
-"""Helios backend application package."""
