@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+helios.db

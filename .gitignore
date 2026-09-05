@@ -1,0 +1,62 @@
+# ==========================================
+# HELIOS Git Ignore Rules
+# ==========================================
+
+# Node & Frontend Build Outputs
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.npm
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+# Environment Variables & Local Configs
+.env
+**/.env
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+# Keep example environment templates
+!.env.example
+!**/.env.example
+
+# Python Caches & Bytecode
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# Local SQLite Database Files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+helios.db
+**/helios.db
+
+# OS and Editor specific
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

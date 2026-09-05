@@ -1,1 +1,3 @@
-"""Pothole detection model placeholder."""
+from .detector_stub import JetsonPotholeDetector
+
+__all__ = ["JetsonPotholeDetector"]
