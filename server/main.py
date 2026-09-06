@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.database.session import Base, SessionLocal, engine
 from app.routes.analytics import router as analytics_router
@@ -71,6 +73,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount media static directory for real edge detection images
+media_dir = os.path.join(os.path.dirname(__file__), "media")
+os.makedirs(media_dir, exist_ok=True)
+app.mount("/media", StaticFiles(directory=media_dir), name="media")
+
 # API v1 Router Registration
 API_PREFIX = "/api/v1"
 
@@ -86,6 +93,7 @@ app.include_router(analytics_router, prefix=API_PREFIX)
 app.include_router(notifications_router, prefix=API_PREFIX)
 app.include_router(mock_router, prefix=API_PREFIX)
 app.include_router(ws_router, prefix=API_PREFIX)
+app.include_router(ws_router)  # expose /ws/events at root
 
 
 @app.get("/")

@@ -34,7 +34,7 @@ class IncidentModel(Base):
     lng = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     camera = Column(String(20), default="front")  # front, rear
-    image_url = Column(String(255), nullable=True)
+    image_url = Column(Text, nullable=True)
     video_url = Column(String(255), nullable=True)
     model = Column(String(100), default="yolo-edge")
     status = Column(String(30), default="detected")  # detected, investigating, dispatched, resolved

@@ -21,7 +21,7 @@ import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { useHeliosWebSocket } from "../context/WebSocketContext";
 import { fetchSOSHistory, updateSOSEvent } from "../services/sos";
 import { updateIncident } from "../services/incidents";
-import { SOSEvent, SOSStatus } from "../types";
+import { Incident, SOSEvent, SOSStatus } from "../types";
 
 export const AccidentSOS: React.FC = () => {
   const navigate = useNavigate();
@@ -48,8 +48,43 @@ export const AccidentSOS: React.FC = () => {
     loadSOS();
 
     const unsubSOS = subscribe("sos_created", (newSOS: SOSEvent) => {
-      setSosEvents((prev) => [newSOS, ...prev]);
+      setSosEvents((prev) => {
+        if (prev.some((e) => e.id === newSOS.id)) return prev;
+        return [newSOS, ...prev];
+      });
     });
+
+    const handleIncomingAccident = (data: any) => {
+      if (!data) return;
+      const inc: Incident = data.incident || data;
+      if (inc && (inc.event_type === "accident" || data.event_type === "accident")) {
+        setSosEvents((prev) => {
+          const exists = prev.some(
+            (e) => e.incident_id === inc.id || e.id === inc.id || e.incident?.id === inc.id
+          );
+          if (exists) return prev;
+          const newSOS: SOSEvent = {
+            id: inc.id?.startsWith("SOS-")
+              ? inc.id
+              : `SOS-${inc.id?.replace(/^INC-/, "") || Math.floor(1000 + Math.random() * 9000)}`,
+            incident_id: inc.id || `INC-${Math.floor(1000 + Math.random() * 9000)}`,
+            bus_id: inc.bus_id || "BUS-UNKNOWN",
+            severity: inc.severity || "high",
+            status: "SENT",
+            dispatched_ambulance: false,
+            notified_police: false,
+            created_at: inc.timestamp || new Date().toISOString(),
+            updated_at: inc.timestamp || new Date().toISOString(),
+            incident: inc,
+          };
+          return [newSOS, ...prev];
+        });
+      }
+    };
+
+    const unsubInc = subscribe("incident_created", handleIncomingAccident);
+    const unsubAcc = subscribe("accident", handleIncomingAccident);
+    const unsubDet = subscribe("detection", handleIncomingAccident);
 
     const unsubUpd = subscribe("sos_updated", (updSOS: any) => {
       setSosEvents((prev) =>
@@ -62,6 +97,9 @@ export const AccidentSOS: React.FC = () => {
 
     return () => {
       unsubSOS();
+      unsubInc();
+      unsubAcc();
+      unsubDet();
       unsubUpd();
     };
   }, [subscribe]);
@@ -150,25 +188,41 @@ export const AccidentSOS: React.FC = () => {
                 }`}
               >
                 {/* Left Info */}
-                <div className="flex items-start gap-4 min-w-0">
+                <div className="flex items-start gap-4 min-w-0 flex-1">
+                  {/* Evidence Thumbnail */}
                   <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                      isPending
-                        ? "bg-red-600 text-white animate-bounce"
-                        : isResolved
-                        ? "bg-emerald-600/20 text-emerald-400"
-                        : "bg-amber-600/20 text-amber-400"
-                    }`}
+                    onClick={() => setSelectedEvent(sos)}
+                    className="relative w-20 h-20 rounded-xl overflow-hidden border border-red-500/40 bg-black shrink-0 cursor-pointer group shadow-sm"
                   >
-                    <Siren className="w-6 h-6" />
+                    <img
+                      src={
+                        inc?.image_url ||
+                        "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=300&auto=format&fit=crop&q=80"
+                      }
+                      alt="Accident Evidence"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-1">
+                      <span className="text-[9px] font-mono text-white font-bold">VIEW</span>
+                    </div>
                   </div>
 
-                  <div className="space-y-1 min-w-0">
+                  <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 font-mono">
                       <span className="text-base font-black text-white">{sos.id}</span>
                       <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
                         Bus: {sos.bus_id}
                       </span>
+                      <Badge
+                        variant={
+                          (inc?.severity || sos.severity) === "critical" ||
+                          (inc?.severity || sos.severity) === "high"
+                            ? "danger"
+                            : "warning"
+                        }
+                      >
+                        SEVERITY: {(inc?.severity || sos.severity).toUpperCase()}
+                      </Badge>
                       <Badge
                         variant={
                           isPending

@@ -77,7 +77,7 @@ async def run_simulation_loop():
                     # Occasionally (every ~45s) simulate a mild road anomaly detection (pothole or traffic update)
                     if tick_counter % 15 == 0 and len(online_buses) > 0:
                         chosen_bus = random.choice(online_buses)
-                        new_pothole_id = f"INC-{random.randint(100, 999)}"
+                        new_pothole_id = f"INC-{random.randint(10000, 99999)}"
                         pothole_inc = IncidentModel(
                             id=new_pothole_id,
                             bus_id=chosen_bus.id,

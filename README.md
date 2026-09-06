@@ -196,8 +196,24 @@ cd client
 npm install
 npm run dev
 ```
-- Dashboard URL: `http://localhost:5173`
-- Demo Credentials: `admin@helios.local` / `admin123`
+### 3. Test Edge AI with Your Own Images
+
+You can test the trained YOLO accident detection model (`best.pt`) on any custom photo in two ways:
+
+#### Option A: Direct Web UI Drag-and-Drop (Easiest)
+1. Open the dashboard at `http://localhost:5173/overview`.
+2. Scroll to the **"Edge AI Live Model Verification & Custom Image Lab"** section (or click **Test My Image** in the top bar).
+3. Drag & drop or browse any image (`.jpg`, `.png`, `.webp`) from your computer.
+4. Click **Run Edge AI Detection**.
+5. Bounding boxes, confidence score %, and detection classes appear in real time, and you can click **Open Emergency Dossier** to view the live triage modal.
+
+#### Option B: Terminal Batch Testing
+1. Drop your photos into the `model_Test_my_image/` folder.
+2. Run:
+   ```bash
+   python test_my_images.py
+   ```
+3. Annotated images with bounding boxes are saved to `model_Test_my_image/results/`, automatically popped up in your image viewer, and broadcasted to your live dashboard.
 
 ---
 
@@ -211,3 +227,4 @@ When physical Jetson Nano hardware is mounted inside the electric buses:
    POST http://<helios-server>:8000/api/v1/detect/<event_type>
    ```
 4. Helios backend validates, persists to database, and broadcasts over WebSockets to all connected command center stations automatically.
+

@@ -50,6 +50,30 @@ ENV/
 helios.db
 **/helios.db
 
+# Media & Temporary AI Outputs
+server/media/*
+!server/media/.gitkeep
+model_Test_my_image/*
+!model_Test_my_image/README.txt
+!model_Test_my_image/sample_car_accident.jpg
+!model_Test_my_image/results/
+model_Test_my_image/results/*
+!model_Test_my_image/results/.gitkeep
+accident_result.jpg
+detected_preview.jpg
+detect_demo/
+detect_results/
+
+# Raw Datasets & Image Batches (Excluded from Git)
+ai_models/accident/train/
+ai_models/accident/valid/
+ai_models/accident/test/
+*.rf.*
+runs/**/train_batch*.jpg
+runs/**/val_batch*.jpg
+runs/**/labels.jpg
+runs/**/last.pt
+
 # OS and Editor specific
 .DS_Store
 Thumbs.db
@@ -60,3 +84,4 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+

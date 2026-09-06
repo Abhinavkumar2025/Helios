@@ -9,7 +9,8 @@ export function getWsUrl(): string {
   if (customWs) return customWs;
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
   const apiBase = getApiBaseUrl();
-  return apiBase.replace(/^http/, "ws") + "/ws/events";
+  const baseHost = apiBase.replace(/\/api\/v1\/?$/, "").replace(/^http/, "ws");
+  return `${baseHost}/ws/events`;
 }
 
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

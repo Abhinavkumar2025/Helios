@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Siren,
   Activity,
@@ -6,6 +7,7 @@ import {
   WifiOff,
   Sparkles,
   CheckCircle2,
+  UploadCloud,
 } from "lucide-react";
 import {
   simulateAccident,
@@ -15,6 +17,7 @@ import {
 } from "../../services/mock";
 
 export const DemoControlBar: React.FC = () => {
+  const navigate = useNavigate();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -66,6 +69,20 @@ export const DemoControlBar: React.FC = () => {
             <Siren className="w-3.5 h-3.5 animate-bounce" />
           )}
           Simulate Accident
+        </button>
+
+        {/* Upload & Test My Image */}
+        <button
+          onClick={() => {
+            navigate("/overview");
+            setTimeout(() => {
+              window.scrollTo({ top: 350, behavior: "smooth" });
+            }, 150);
+          }}
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wider rounded-lg bg-solar-500/20 hover:bg-solar-500/30 text-solar-300 border border-solar-500/50 active:scale-95 transition-all cursor-pointer shadow-sm"
+        >
+          <UploadCloud className="w-3.5 h-3.5 text-solar-400" />
+          Test My Image
         </button>
 
         {/* Simulate Pothole */}

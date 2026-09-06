@@ -1,5 +1,5 @@
 import { Incident, IncidentSeverity, IncidentStatus } from "../types";
-import { apiRequest } from "./api";
+import { apiRequest, getApiBaseUrl } from "./api";
 
 export interface IncidentFilters {
   event_type?: string;
@@ -38,3 +38,52 @@ export async function updateIncident(
     body: JSON.stringify(data),
   });
 }
+
+export interface DetectBox {
+  class_id: number;
+  class_name: string;
+  is_crash: boolean;
+  confidence: number;
+  bbox: number[];
+}
+
+export interface DetectUploadResponse {
+  success: boolean;
+  detected: boolean;
+  confidence: number;
+  raw_confidence: number;
+  severity: string;
+  latency_ms: number;
+  boxes: DetectBox[];
+  image_url: string;
+  bus_id: string;
+  incident?: Incident;
+  message: string;
+}
+
+export async function uploadAndDetectImage(
+  file: File,
+  busId?: string,
+  confidenceBoost: number = 0.15,
+  forceAlert: boolean = false
+): Promise<DetectUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+  formData.append("confidence_boost", confidenceBoost.toString());
+  formData.append("force_alert", forceAlert.toString());
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Upload detection failed");
+  }
+
+  return response.json();
+}
+
