@@ -9,14 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "clsx": "^2.1.1",
     "framer-motion": "^11.15.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
+    "maplibre-gl": "^6.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
-    "react-router-dom": "^6.28.0",
+    "react-router-dom": "^7.18.3",
     "recharts": "^2.14.1",
     "tailwind-merge": "^2.5.5"
   },

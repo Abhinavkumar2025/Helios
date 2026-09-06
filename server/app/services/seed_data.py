@@ -165,7 +165,7 @@ def seed_database(db: Session):
             "type": "road_sign",
             "severities": ["low", "medium"],
             "model": "roadsign-yolo",
-            "image": "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&auto=format&fit=crop&q=80",
+            "image": "https://images.unsplash.com/photo-1584897093602-40761fbeff57?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MzB8fHR3aXN0ZWQlMjByb2FkJTIwc2lnbnN8ZW58MHx8MHx8fDA%3D",
             "notes": "Faded pedestrian zebra crossing with visibility below 30%."
         },
         {

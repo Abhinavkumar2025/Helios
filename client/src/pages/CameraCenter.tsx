@@ -33,10 +33,9 @@ const INITIAL_FEEDS: CameraFeed[] = [
     status: "live",
     fps: 29.9,
     resolution: "1080p",
-    image: "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1560782205-4dd83ceb0270?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cG90aG9sZXN8ZW58MHx8MHx8fDA%3D?w=800&auto=format&fit=crop&q=80",
     boxes: [
-      { label: "Car", conf: 96, top: "42%", left: "30%", width: "20%", height: "24%", color: "border-emerald-400 text-emerald-400" },
-      { label: "Pothole", conf: 91, top: "72%", left: "45%", width: "16%", height: "14%", color: "border-solar-400 text-solar-400" },
+      { label: "Pothole", conf: 91, top: "30%", left: "25%", width: "55%", height: "50%", color: "border-solar-400 text-solar-400" },
     ],
   },
   {
@@ -46,9 +45,9 @@ const INITIAL_FEEDS: CameraFeed[] = [
     status: "live",
     fps: 30.0,
     resolution: "1080p",
-    image: "https://images.unsplash.com/photo-1547683905-f686c993aae5?w=800&auto=format&fit=crop&q=80",
+    image: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%2Fid%2FOIP.Qeac6rUuIUPeZnZVeduAFQHaEK%3Fpid%3DApi&f=1&ipt=18be7e4d5d290d81d4920b1406e7e3abd143a3138c8333199bce351a0e32a76e&ipo=images?w=800&auto=format&fit=crop&q=80",
     boxes: [
-      { label: "Waterlogging", conf: 93, top: "60%", left: "20%", width: "50%", height: "26%", color: "border-cyan-400 text-cyan-400" },
+      { label: "Waterlogging", conf: 93, top: "55%", left: "20%", width: "70%", height: "40%", color: "border-cyan-400 text-cyan-400" },
     ],
   },
   {
@@ -58,7 +57,7 @@ const INITIAL_FEEDS: CameraFeed[] = [
     status: "live",
     fps: 29.8,
     resolution: "1080p",
-    image: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1575830941656-6f6df67ef0a7?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mjg3fHxtb3ZpbmclMjBjYXJ8ZW58MHx8MHx8fDA%3D?w=800&auto=format&fit=crop&q=80",
     boxes: [
       { label: "Vehicle", conf: 98, top: "35%", left: "40%", width: "28%", height: "35%", color: "border-red-400 text-red-400" },
     ],
@@ -66,13 +65,13 @@ const INITIAL_FEEDS: CameraFeed[] = [
   {
     id: "CAM-04",
     busId: "BUS-105",
-    cameraType: "Rear",
+    cameraType: "Front",
     status: "live",
     fps: 25.0,
     resolution: "720p",
-    image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&auto=format&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1676165851361-da68616d4fb8?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDh8fHplYnJhJTIwY3Jvc3Npbmd8ZW58MHx8MHx8fDA%3D",
     boxes: [
-      { label: "Zebra Crossing", conf: 94, top: "70%", left: "15%", width: "70%", height: "22%", color: "border-amber-400 text-amber-400" },
+      { label: "Zebra Crossing", conf: 94, top: "45%", left: "15%", width: "90%", height: "30%", color: "border-amber-400 text-amber-400" },
     ],
   },
 ];

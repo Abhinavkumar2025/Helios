@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Default logged in demo session for seamless inspection, but login page is fully functional
     return {
       id: "USR-001",
-      name: "Commander Mihir",
+      name: "Admin",
       email: "admin@helios.local",
       role: "City Command Supervisor",
       badgeNumber: "HYD-OPS-429",
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ) {
       const newUser: User = {
         id: "USR-001",
-        name: email.split("@")[0].toUpperCase() + " (Admin)",
+        name: email.split("@")[0].toUpperCase(),
         email: email,
         role: "City Command Supervisor",
         badgeNumber: "HYD-OPS-429",

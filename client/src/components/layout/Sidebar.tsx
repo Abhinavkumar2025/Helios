@@ -53,6 +53,7 @@ const secondaryNavItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const location = useLocation();
+  const summary = { active_buses: 24, total_buses: 32 };
 
   return (
     <aside
@@ -65,9 +66,6 @@ export const Sidebar: React.FC = () => {
       <div>
         <div className="flex items-center justify-between px-4 py-5 border-b border-slate-800/70">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-solar-400 to-solar-600 shadow-glow-solar text-helios-950 font-black shrink-0">
-              <SunMedium className="w-6 h-6 animate-pulse" />
-            </div>
             {!collapsed && (
               <div className="flex flex-col">
                 <span className="font-extrabold tracking-wider text-lg font-mono text-white leading-tight">
@@ -98,10 +96,9 @@ export const Sidebar: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
               <span className="text-xs font-mono font-medium text-emerald-400 uppercase tracking-wider">
-                Fleet AI Online
+                Command Panel
               </span>
             </div>
-            <span className="text-[10px] font-mono text-emerald-300/80">18/20</span>
           </div>
         )}
 

@@ -226,10 +226,10 @@ export const Overview: React.FC = () => {
       {/* Top 6 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
-          label="Active Buses"
-          value={`${summary.active_buses} / ${summary.total_buses}`}
+          label="Active Transport"
+          value={`${summary.active_buses}/${summary.total_buses}`}
           icon={<Bus className="w-5 h-5" />}
-          trend="90% fleet uptime"
+          // trend="90% fleet uptime"
           trendUp={true}
           color="emerald"
           activePulse={true}
@@ -238,7 +238,7 @@ export const Overview: React.FC = () => {
           label="Accidents Today"
           value={summary.accidents_today}
           icon={<Siren className="w-5 h-5" />}
-          trend="+2 in last hour"
+          // trend="+2 in last hour"
           trendUp={false}
           color="red"
           activePulse={summary.accidents_today > 0}
@@ -247,7 +247,7 @@ export const Overview: React.FC = () => {
           label="Potholes Detected"
           value={summary.potholes_detected}
           icon={<Activity className="w-5 h-5" />}
-          trend="+14% this week"
+          // trend="+14% this week"
           trendUp={true}
           color="amber"
         />
@@ -255,7 +255,7 @@ export const Overview: React.FC = () => {
           label="Waterlogging Alerts"
           value={summary.waterlogging_alerts}
           icon={<Droplets className="w-5 h-5" />}
-          trend="Monsoon monitoring"
+          // trend="Monsoon monitoring"
           trendUp={true}
           color="cyan"
         />
@@ -263,7 +263,7 @@ export const Overview: React.FC = () => {
           label="Traffic Events"
           value={summary.traffic_events}
           icon={<BarChart3 className="w-5 h-5" />}
-          trend="Corridor flow active"
+          // trend="Corridor flow active"
           trendUp={true}
           color="purple"
         />
@@ -271,7 +271,7 @@ export const Overview: React.FC = () => {
           label="SOS Alerts"
           value={summary.sos_alerts}
           icon={<AlertTriangle className="w-5 h-5" />}
-          trend="Emergency priority"
+          // trend="Emergency priority"
           trendUp={false}
           color="red"
           activePulse={true}
@@ -298,7 +298,7 @@ export const Overview: React.FC = () => {
               {/* Radar Grid Animation Effect */}
               <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40" />
               <div className="relative z-10 space-y-3 max-w-md">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-solar-500/10 border border-solar-500/30 text-solar-400 animate-pulse">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-solar-500/10 border border-solar-500/30 text-solar-400">
                   <Bus className="w-6 h-6" />
                 </div>
                 <h4 className="text-base font-bold font-mono text-white">

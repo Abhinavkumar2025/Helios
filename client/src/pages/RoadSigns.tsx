@@ -114,7 +114,7 @@ export const RoadSigns: React.FC = () => {
                   <img
                     src={
                       inc.image_url ||
-                      "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&auto=format&fit=crop&q=80"
+                      "https://images.unsplash.com/photo-1584897093602-40761fbeff57?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MzB8fHR3aXN0ZWQlMjByb2FkJTIwc2lnbnN8ZW58MHx8MHx8fDA%3D"
                     }
                     alt="Road Asset"
                     className="w-full h-full object-cover"

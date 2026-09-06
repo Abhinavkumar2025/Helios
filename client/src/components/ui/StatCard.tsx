@@ -75,13 +75,8 @@ export const StatCard: React.FC<StatCardProps> = ({
             <span className="text-xs font-mono tracking-wider uppercase text-slate-400 font-medium">
               {label}
             </span>
-            {activePulse && (
-              <span className="relative flex h-2 w-2">
-                <span className={clsx("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", currentTheme.pulse)} />
-                <span className={clsx("relative inline-flex rounded-full h-2 w-2", currentTheme.pulse)} />
-              </span>
-            )}
           </div>
+
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold tracking-tight text-white font-mono">
               {value}
@@ -94,14 +89,38 @@ export const StatCard: React.FC<StatCardProps> = ({
           </div>
         </div>
 
-        <div className={clsx("p-3 rounded-xl border", currentTheme.iconBg)}>
-          {icon}
+        <div className="relative">
+          {activePulse && (
+            <span className="absolute -top-1 -right-1 z-10 flex h-2.5 w-2.5">
+              <span
+                className={clsx(
+                  "absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping",
+                  currentTheme.pulse
+                )}
+              />
+              <span
+                className={clsx(
+                  "relative inline-flex h-2.5 w-2.5 rounded-full",
+                  currentTheme.pulse
+                )}
+              />
+            </span>
+          )}
+
+          <div className={clsx("p-3 rounded-xl border", currentTheme.iconBg)}>
+            {icon}
+          </div>
         </div>
       </div>
 
       {trend && (
         <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs">
-          <span className={clsx("font-medium", trendUp ? "text-emerald-400" : "text-slate-400")}>
+          <span
+            className={clsx(
+              "font-medium",
+              trendUp ? "text-emerald-400" : "text-slate-400"
+            )}
+          >
             {trend}
           </span>
           <span className="text-slate-500 font-mono">Live telemetry</span>
