@@ -98,13 +98,13 @@ export const TopNav: React.FC = () => {
 
       {/* Center Search */}
       <form onSubmit={handleSearchSubmit} className="relative hidden md:block max-w-xs w-full">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="Search bus (BUS-101) or incident..."
+          placeholder="Search bus (BUS-101) or incident"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-helios-900 border border-slate-800 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-solar-500/50 font-mono"
+          className="w-full h-10 pl-9 pr-3 py-1.5 rounded-xl bg-helios-700 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-solar-500/50 font-mono"
         />
       </form>
 
@@ -117,7 +117,7 @@ export const TopNav: React.FC = () => {
         </div>
 
         {/* Backend & WS Connection Status */}
-        <div
+        {/* <div
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-medium ${
             isConnected
               ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
@@ -139,10 +139,10 @@ export const TopNav: React.FC = () => {
               <span>OFFLINE</span>
             </>
           )}
-        </div>
+        </div> */}
 
         {/* Notification Bell with Dropdown */}
-        <div className="relative">
+        {/* <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors relative"
@@ -196,7 +196,7 @@ export const TopNav: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Admin Profile Dropdown */}
         <div className="relative">
