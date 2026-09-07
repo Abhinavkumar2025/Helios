@@ -94,3 +94,77 @@ export async function uploadAndDetectImage(
   return response.json();
 }
 
+
+// ─── Pothole AI Upload ───────────────────────────────────
+
+export async function uploadAndDetectPothole(
+  file: File,
+  busId?: string
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/pothole/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Pothole detection failed");
+  }
+
+  return response.json();
+}
+
+
+// ─── Waterlogging AI Upload ──────────────────────────────
+
+export async function uploadAndDetectWaterlogging(
+  file: File,
+  busId?: string
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/waterlogging/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Waterlogging detection failed");
+  }
+
+  return response.json();
+}
+
+
+// ─── Traffic / Vehicle AI Upload ─────────────────────────
+
+export async function uploadAndDetectTraffic(
+  file: File,
+  busId?: string
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/traffic/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Traffic detection failed");
+  }
+
+  return response.json();
+}
