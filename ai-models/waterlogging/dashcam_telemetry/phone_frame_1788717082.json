@@ -1,0 +1,32 @@
+{
+  "frame": "phone_frame_1788717082.jpg",
+  "frame_index": 1,
+  "timestamp": "2026-09-06 23:21:22",
+  "severity": "NORMAL",
+  "severity_title": "CLEAR / DRY",
+  "water_hazard_score": 4.0,
+  "road_water_coverage_pct": 7.02,
+  "latency_ms": 1843.64,
+  "marker_rgba": [
+    0,
+    255,
+    0,
+    160
+  ],
+  "gps": {
+    "lat": 16.5062,
+    "lon": 80.648,
+    "speed_kmh": 25.0,
+    "source": "FALLBACK_GPS"
+  },
+  "metrics": {
+    "road_water_coverage_pct": 7.02,
+    "mean_confidence": 0.57,
+    "water_hazard_score": 4.0
+  },
+  "classification": {
+    "severity": "NORMAL",
+    "severity_title": "CLEAR / DRY",
+    "needs_driver_alert": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "INC-1788714452-009",
+  "incident_id": "WATERLOG_PATCH_009",
+  "bus_id": "BUS-205",
+  "event_type": "waterlogging",
+  "status": "detected",
+  "camera": "front",
+  "model": "yolo11n-seg",
+  "timestamp": "2026-09-06T17:07:32.000Z",
+  "frame": "frame_0049_1788714450.jpg",
+  "image_url": "/media/detections/dashcam_clean_outputs/frame_0049_1788714450.jpg",
+  "video_url": "test_media/sampl1.mp4",
+  "confidence": 0.753,
+  "severity": "critical",
+  "classification": {
+    "severity": "CRITICAL",
+    "severity_title": "CRITICAL WATERLOGGING"
+  },
+  "gps": {
+    "lat": 16.43195,
+    "lon": 80.56935,
+    "lng": 80.56935,
+    "speed_kmh": 32.0
+  },
+  "metrics": {
+    "confidence": 0.753,
+    "mean_confidence": 0.753,
+    "water_hazard_score": 54.86,
+    "road_water_coverage_pct": 72.86,
+    "selection_avg_score": 65.08
+  },
+  "deduplication_meta": {
+    "cluster_distance_m": 10.0,
+    "continuous_frames_merged": 8,
+    "selection_criteria": "HIGHEST_AVG_CONFIDENCE_AND_HAZARD_SCORE"
+  },
+  "metadata_json": "{\"cluster_radius_m\": 10.0, \"continuous_frames_merged\": 8, \"selection_avg_score\": 65.08}",
+  "notes": "Representative incident frame retained with highest score across continuous 10.0m patch"
+}
