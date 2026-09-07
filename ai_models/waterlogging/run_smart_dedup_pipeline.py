@@ -5,6 +5,7 @@ import time
 import json
 import cv2
 import numpy as np
+# pyrefly: ignore [missing-import]
 import geocoder
 from ultralytics import YOLO
 

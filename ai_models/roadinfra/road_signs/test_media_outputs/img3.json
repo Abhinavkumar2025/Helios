@@ -1,0 +1,21 @@
+[
+  {
+    "incident_id": "BUS-AP-01_1788803706921_1",
+    "timestamp": "2026-09-07T17:55:06.844149Z",
+    "bus_id": "BUS-AP-01",
+    "source_image": "img3.webp",
+    "status": "NEEDS FIX",
+    "defect_confidence_pct": 87.3,
+    "bounding_box": {
+      "x1": 128,
+      "y1": 60,
+      "x2": 375,
+      "y2": 333
+    },
+    "location": {
+      "latitude": 16.5062,
+      "longitude": 80.648,
+      "source": "bus_hardware_gps"
+    }
+  }
+]

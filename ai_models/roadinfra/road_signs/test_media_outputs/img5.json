@@ -1,0 +1,40 @@
+[
+  {
+    "incident_id": "BUS-AP-01_1788803707928_1",
+    "timestamp": "2026-09-07T17:55:07.824557Z",
+    "bus_id": "BUS-AP-01",
+    "source_image": "img5.webp",
+    "status": "NEEDS FIX",
+    "defect_confidence_pct": 91.3,
+    "bounding_box": {
+      "x1": 59,
+      "y1": 21,
+      "x2": 500,
+      "y2": 333
+    },
+    "location": {
+      "latitude": 16.5062,
+      "longitude": 80.648,
+      "source": "bus_hardware_gps"
+    }
+  },
+  {
+    "incident_id": "BUS-AP-01_1788803708055_2",
+    "timestamp": "2026-09-07T17:55:07.824557Z",
+    "bus_id": "BUS-AP-01",
+    "source_image": "img5.webp",
+    "status": "NEEDS FIX",
+    "defect_confidence_pct": 83.0,
+    "bounding_box": {
+      "x1": 473,
+      "y1": 0,
+      "x2": 500,
+      "y2": 26
+    },
+    "location": {
+      "latitude": 16.5062,
+      "longitude": 80.648,
+      "source": "bus_hardware_gps"
+    }
+  }
+]
