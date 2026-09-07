@@ -1,0 +1,9 @@
+ultralytics
+opencv-python
+numpy
+pyyaml
+pillow
+geocoder
+streamlit
+pandas
+pydeck
