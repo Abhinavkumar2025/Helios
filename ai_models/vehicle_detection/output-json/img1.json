@@ -2,19 +2,19 @@
     "image_name": "img1.webp",
     "saved_output_path": "output-images\\detected_img1.webp",
     "individual_json_path": "output-json\\img1.json",
-    "bus_id": "BUS-007",
+    "bus_id": "BUS-002",
     "coordinates": {
         "lat": 16.5062,
         "lon": 80.648
     },
     "road_name": "Patamata Lanka",
-    "traffic_flow_percent": 37.92,
+    "traffic_flow_percent": 24.63,
     "congestion_status": "Low (Free Flow)",
-    "total_pcu": 7.0,
-    "total_vehicles": 7,
+    "total_pcu": 4.0,
+    "total_vehicles": 4,
     "breakdown": {
         "bicycle": 0,
-        "car": 7,
+        "car": 4,
         "motorcycle": 0,
         "bus": 0,
         "truck": 0
