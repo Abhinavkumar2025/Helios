@@ -64,15 +64,14 @@ detected_preview.jpg
 detect_demo/
 detect_results/
 
-# Raw Datasets & Image Batches (Excluded from Git)
-ai_models/accident/train/
-ai_models/accident/valid/
-ai_models/accident/test/
+# Raw Datasets, Runs & Heavy AI Outputs (Excluded from Git)
+**/train/
+**/valid/
+**/test/
+**/runs/
 *.rf.*
-runs/**/train_batch*.jpg
-runs/**/val_batch*.jpg
-runs/**/labels.jpg
-runs/**/last.pt
+**/last.pt
+
 
 # OS and Editor specific
 .DS_Store

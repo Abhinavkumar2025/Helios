@@ -36,11 +36,12 @@ def main():
             print(f"[!] File not found: {image_path}")
             return
     else:
-        # Default to a verified car accident test image
-        default_img = ROOT_DIR / "ai_models" / "accident" / "valid" / "images" / "images_146_jpg.rf.502eedbb5b68c5be64755efb79e1a366.jpg"
+        # Default to sample car accident test image
+        default_img = ROOT_DIR / "model_Test_my_image" / "sample_car_accident.jpg"
         if not default_img.exists():
-            default_img = ROOT_DIR / "ai_models" / "accident" / "train" / "images" / "images_150_jpg.rf.67192f0fd5272420da2b4bfc3431b581.jpg"
+            default_img = ROOT_DIR / "model_Test_my_image" / "cars-crash-accident-on-street-600w-2557451235.webp"
         image_path = default_img
+
 
     print(f"[1] Target Image : {image_path.name}")
     print(f"[2] Model Weights: {WEIGHTS_PATH}")
