@@ -190,3 +190,23 @@ async def update_incident(incident_id: str, payload: IncidentUpdate, db: Session
             })
 
     return response_data
+
+
+@router.delete("/{incident_id}")
+async def delete_incident(incident_id: str, db: Session = Depends(get_db)):
+    inc = db.query(IncidentModel).filter(IncidentModel.id == incident_id).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
+
+    # Delete any related SOS events
+    sos_events = db.query(SOSEventModel).filter(SOSEventModel.incident_id == incident_id).all()
+    for s in sos_events:
+        db.delete(s)
+        await manager.broadcast("sos_deleted", {"id": s.id, "incident_id": incident_id})
+
+    db.delete(inc)
+    db.commit()
+
+    await manager.broadcast("incident_deleted", {"id": incident_id})
+    return {"status": "success", "message": f"Incident {incident_id} deleted", "id": incident_id}
+

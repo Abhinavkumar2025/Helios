@@ -6,10 +6,9 @@ from ultralytics import YOLO
 def train():
     script_dir = Path(__file__).parent.resolve()
     data_yaml = script_dir / "data.yaml"
-    # User specified output weights should land at runs/accident/*/weights/best.pt
-    # In Helios root or ai_models/accident
-    helios_root = script_dir.parent.parent.resolve()
-    project_dir = helios_root / "runs" / "accident"
+    # Output weights land in ai_models/accident/runs/accident/*/weights/best.pt
+    project_dir = script_dir / "runs" / "accident"
+
     
     device = 0 if torch.cuda.is_available() else "cpu"
     print(f"[HELIOS] Training YOLOv8n Accident Detector on device: {device}")

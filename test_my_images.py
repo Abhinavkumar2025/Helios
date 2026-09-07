@@ -22,15 +22,20 @@ from ultralytics import YOLO
 ROOT_DIR = Path(__file__).resolve().parent
 TEST_FOLDER = ROOT_DIR / "model_Test_my_image"
 RESULTS_FOLDER = TEST_FOLDER / "results"
-WEIGHTS_PATH = ROOT_DIR / "runs" / "accident" / "exp" / "weights" / "best.pt"
+WEIGHTS_PATH = ROOT_DIR / "ai_models" / "accident" / "weights" / "best.pt"
+
+if not WEIGHTS_PATH.exists():
+    WEIGHTS_PATH = ROOT_DIR / "ai_models" / "accident" / "runs" / "accident" / "exp" / "weights" / "best.pt"
+if not WEIGHTS_PATH.exists():
+    WEIGHTS_PATH = ROOT_DIR / "runs" / "accident" / "exp" / "weights" / "best.pt"
+if not WEIGHTS_PATH.exists():
+    WEIGHTS_PATH = ROOT_DIR / "yolov8n.pt"
 SERVER_URL = "http://localhost:8000/api/v1"
 
 # Ensure folders exist
 os.makedirs(TEST_FOLDER, exist_ok=True)
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
-if not WEIGHTS_PATH.exists():
-    WEIGHTS_PATH = ROOT_DIR / "yolov8n.pt"
 
 SUPPORTED_EXTENSIONS = ("*.jpg", "*.jpeg", "*.png", "*.webp", "*.bmp")
 

@@ -15,11 +15,14 @@ from ultralytics import YOLO
 
 # Project root
 ROOT_DIR = Path(__file__).resolve().parent
-WEIGHTS_PATH = ROOT_DIR / "runs" / "accident" / "exp" / "weights" / "best.pt"
-
+WEIGHTS_PATH = ROOT_DIR / "ai_models" / "accident" / "weights" / "best.pt"
 if not WEIGHTS_PATH.exists():
-    # Fallback to yolov8n.pt if best.pt is missing
+    WEIGHTS_PATH = ROOT_DIR / "ai_models" / "accident" / "runs" / "accident" / "exp" / "weights" / "best.pt"
+if not WEIGHTS_PATH.exists():
+    WEIGHTS_PATH = ROOT_DIR / "runs" / "accident" / "exp" / "weights" / "best.pt"
+if not WEIGHTS_PATH.exists():
     WEIGHTS_PATH = ROOT_DIR / "yolov8n.pt"
+
 
 def main():
     print("=" * 65)

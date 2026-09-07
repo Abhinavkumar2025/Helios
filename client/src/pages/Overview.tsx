@@ -157,9 +157,33 @@ export const Overview: React.FC = () => {
       );
     });
 
+    const unsubIncDel = subscribe("incident_deleted", (data: any) => {
+      if (data?.id) {
+        setRecentIncidents((prev) => prev.filter((i) => i.id !== data.id));
+      }
+    });
+
+    const unsubSosDel = subscribe("sos_deleted", (data: any) => {
+      if (data?.incident_id) {
+        setRecentIncidents((prev) => prev.filter((i) => i.id !== data.incident_id));
+      }
+      setAnalytics((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          summary: {
+            ...prev.summary,
+            sos_alerts: Math.max(0, prev.summary.sos_alerts - 1),
+          },
+        };
+      });
+    });
+
     return () => {
       unsubIncident();
       unsubBus();
+      unsubIncDel();
+      unsubSosDel();
     };
   }, [subscribe]);
 

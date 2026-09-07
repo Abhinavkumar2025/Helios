@@ -25,11 +25,16 @@ def get_yolo_model():
     global _model_instance
     if _model_instance is None:
         helios_root = Path(__file__).resolve().parents[3]
-        weights = helios_root / "runs" / "accident" / "exp" / "weights" / "best.pt"
+        weights = helios_root / "ai_models" / "accident" / "weights" / "best.pt"
+        if not weights.exists():
+            weights = helios_root / "ai_models" / "accident" / "runs" / "accident" / "exp" / "weights" / "best.pt"
+        if not weights.exists():
+            weights = helios_root / "runs" / "accident" / "exp" / "weights" / "best.pt"
         if not weights.exists():
             weights = helios_root / "yolov8n.pt"
         _model_instance = YOLO(str(weights))
     return _model_instance
+
 
 
 @router.post("/pothole", response_model=IncidentResponse)

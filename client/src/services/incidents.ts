@@ -39,6 +39,13 @@ export async function updateIncident(
   });
 }
 
+export async function deleteIncident(incidentId: string): Promise<{ status: string; message: string; id: string }> {
+  return apiRequest<{ status: string; message: string; id: string }>(`/incidents/${incidentId}`, {
+    method: "DELETE",
+  });
+}
+
+
 export interface DetectBox {
   class_id: number;
   class_name: string;

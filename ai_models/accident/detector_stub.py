@@ -34,14 +34,15 @@ class JetsonAccidentDetector:
         self.model = YOLO(self.weights_path)
 
     def _find_best_weights(self) -> str:
-        """Finds best.pt from runs/accident/*/weights/best.pt or falls back to yolov8n.pt."""
+        """Finds best.pt from ai_models/accident/weights/best.pt, runs/ or falls back to yolov8n.pt."""
         base_dir = Path(__file__).resolve().parent
         helios_root = base_dir.parent.parent
 
         search_patterns = [
-            str(helios_root / "runs" / "accident" / "**" / "weights" / "best.pt"),
+            str(base_dir / "weights" / "best.pt"),
             str(base_dir / "runs" / "accident" / "**" / "weights" / "best.pt"),
-            str(helios_root / "runs" / "accident" / "exp" / "weights" / "best.pt"),
+            str(helios_root / "ai_models" / "accident" / "weights" / "best.pt"),
+            str(helios_root / "runs" / "accident" / "**" / "weights" / "best.pt"),
         ]
 
         for pattern in search_patterns:
@@ -52,7 +53,9 @@ class JetsonAccidentDetector:
                 return matches[0]
 
         # Fallback if training hasn't produced weights yet
-        return "yolov8n.pt"
+        fallback = helios_root / "yolov8n.pt"
+        return str(fallback) if fallback.exists() else "yolov8n.pt"
+
 
     def process_frame(
         self,

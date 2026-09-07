@@ -72,9 +72,17 @@ export const IncidentCenter: React.FC = () => {
       }
     });
 
+    const unsubDel = subscribe("incident_deleted", (data: any) => {
+      if (data?.id) {
+        setIncidents((prev) => prev.filter((i) => i.id !== data.id));
+        setSelectedIncident((prev) => (prev?.id === data.id ? null : prev));
+      }
+    });
+
     return () => {
       unsubNew();
       unsubUpd();
+      unsubDel();
     };
   }, [eventTypeFilter, severityFilter, statusFilter, subscribe]);
 

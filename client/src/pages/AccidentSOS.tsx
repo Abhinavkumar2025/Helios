@@ -13,13 +13,14 @@ import {
   ExternalLink,
   RefreshCw,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { useHeliosWebSocket } from "../context/WebSocketContext";
-import { fetchSOSHistory, updateSOSEvent } from "../services/sos";
+import { fetchSOSHistory, updateSOSEvent, deleteSOSEvent } from "../services/sos";
 import { updateIncident } from "../services/incidents";
 import { Incident, SOSEvent, SOSStatus } from "../types";
 
@@ -31,6 +32,8 @@ export const AccidentSOS: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<SOSEvent | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<SOSEvent | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadSOS = async () => {
     try {
@@ -95,12 +98,21 @@ export const AccidentSOS: React.FC = () => {
       }
     });
 
+    const unsubDel = subscribe("sos_deleted", (data: any) => {
+      if (!data) return;
+      const delId = data.id || data.sos_id;
+      const incId = data.incident_id;
+      setSosEvents((prev) => prev.filter((e) => e.id !== delId && (!incId || e.incident_id !== incId)));
+      setSelectedEvent((prev) => (prev && (prev.id === delId || (incId && prev.incident_id === incId)) ? null : prev));
+    });
+
     return () => {
       unsubSOS();
       unsubInc();
       unsubAcc();
       unsubDet();
       unsubUpd();
+      unsubDel();
     };
   }, [subscribe]);
 
@@ -124,9 +136,26 @@ export const AccidentSOS: React.FC = () => {
     }
   };
 
+  const handleDelete = async (event: SOSEvent) => {
+    try {
+      setIsDeleting(true);
+      await deleteSOSEvent(event.id);
+      setSosEvents((prev) => prev.filter((e) => e.id !== event.id && e.incident_id !== event.incident_id));
+      if (selectedEvent?.id === event.id || selectedEvent?.incident_id === event.incident_id) {
+        setSelectedEvent(null);
+      }
+      setEventToDelete(null);
+    } catch (err: any) {
+      alert(`Failed to delete SOS event: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const activeAlerts = sosEvents.filter(
     (e) => e.status !== "RESOLVED"
   );
+
 
   return (
     <div className="space-y-6">
@@ -309,8 +338,19 @@ export const AccidentSOS: React.FC = () => {
                       Mark Resolved
                     </button>
                   )}
+
+                  <button
+                    onClick={() => setEventToDelete(sos)}
+                    disabled={isDeleting}
+                    className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-red-950/60 hover:text-red-400 hover:border-red-500/50 text-slate-400 border border-slate-700/80 font-mono font-semibold text-xs transition-all cursor-pointer flex items-center gap-1.5 group"
+                    title="Delete Emergency SOS"
+                  >
+                    <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-red-400 transition-colors" />
+                    <span className="text-slate-300 group-hover:text-red-300 transition-colors">Delete</span>
+                  </button>
                 </div>
               </div>
+
             );
           })
         )}
@@ -401,43 +441,102 @@ export const AccidentSOS: React.FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-800">
               <button
                 onClick={() => {
+                  const toDel = selectedEvent;
                   setSelectedEvent(null);
-                  navigate("/map");
+                  setEventToDelete(toDel);
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono flex items-center gap-1.5 cursor-pointer"
+                disabled={isDeleting}
+                className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-red-950/60 hover:text-red-400 hover:border-red-500/50 text-slate-400 border border-slate-700/80 text-xs font-mono flex items-center gap-1.5 cursor-pointer transition-all group"
+                title="Delete SOS Incident"
               >
-                <MapPin className="w-3.5 h-3.5 text-solar-400" />
-                Track on GIS Map
+                <Trash2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-red-400 transition-colors" />
+                <span className="text-slate-300 group-hover:text-red-300 transition-colors">Delete Record</span>
               </button>
 
-              {!selectedEvent.dispatched_ambulance && (
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
-                  onClick={() =>
-                    handleStatusChange(selectedEvent.id, selectedEvent.incident_id, "AMBULANCE_DISPATCHED", {
-                      dispatched_ambulance: true,
-                    })
-                  }
-                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-bold uppercase tracking-wider shadow-glow-emergency cursor-pointer flex items-center gap-1.5"
+                  onClick={() => {
+                    setSelectedEvent(null);
+                    navigate("/map");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Ambulance className="w-4 h-4" />
-                  Dispatch Ambulance
+                  <MapPin className="w-3.5 h-3.5 text-solar-400" />
+                  Track on GIS Map
                 </button>
-              )}
 
-              {selectedEvent.status !== "RESOLVED" && (
-                <button
-                  onClick={() =>
-                    handleStatusChange(selectedEvent.id, selectedEvent.incident_id, "RESOLVED")
-                  }
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Resolve Emergency
-                </button>
-              )}
+                {!selectedEvent.dispatched_ambulance && (
+                  <button
+                    onClick={() =>
+                      handleStatusChange(selectedEvent.id, selectedEvent.incident_id, "AMBULANCE_DISPATCHED", {
+                        dispatched_ambulance: true,
+                      })
+                    }
+                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-bold uppercase tracking-wider shadow-glow-emergency cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Ambulance className="w-4 h-4" />
+                    Dispatch Ambulance
+                  </button>
+                )}
+
+                {selectedEvent.status !== "RESOLVED" && (
+                  <button
+                    onClick={() =>
+                      handleStatusChange(selectedEvent.id, selectedEvent.incident_id, "RESOLVED")
+                    }
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Resolve Emergency
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Confirmation Modal for Deletion */}
+      <Modal
+        isOpen={eventToDelete !== null}
+        onClose={() => !isDeleting && setEventToDelete(null)}
+        title={
+          <div className="flex items-center gap-2 font-mono text-red-400">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+            <span>CONFIRM EMERGENCY SOS DELETION</span>
+          </div>
+        }
+        maxWidth="md"
+      >
+        {eventToDelete && (
+          <div className="space-y-4 font-mono">
+            <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/50 text-xs text-red-200 leading-relaxed">
+              Are you sure you want to permanently delete emergency alarm{" "}
+              <strong className="text-white font-bold">{eventToDelete.id}</strong> on{" "}
+              <strong className="text-solar-400 font-bold">{eventToDelete.bus_id}</strong>?
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              This action will purge this SOS event and its linked accident incident record from the active emergency queue and telemetry database.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setEventToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(eventToDelete)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-bold uppercase tracking-wider shadow-glow-emergency transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                {isDeleting ? "Deleting..." : "Permanently Delete"}
+              </button>
             </div>
           </div>
         )}
@@ -445,3 +544,4 @@ export const AccidentSOS: React.FC = () => {
     </div>
   );
 };
+

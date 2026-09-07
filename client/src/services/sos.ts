@@ -14,3 +14,10 @@ export async function updateSOSEvent(
     body: JSON.stringify(data),
   });
 }
+
+export async function deleteSOSEvent(sosId: string): Promise<{ status: string; message: string; id: string }> {
+  return apiRequest<{ status: string; message: string; id: string }>(`/sos/${sosId}`, {
+    method: "DELETE",
+  });
+}
+

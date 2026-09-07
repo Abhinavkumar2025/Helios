@@ -91,3 +91,38 @@ async def update_sos(sos_id: str, payload: SOSUpdate, db: Session = Depends(get_
     resp = build_sos_response(sos, db)
     await manager.broadcast("sos_updated", resp.dict())
     return resp
+
+
+@router.delete("/{sos_id}")
+async def delete_sos(sos_id: str, db: Session = Depends(get_db)):
+    sos = db.query(SOSEventModel).filter(SOSEventModel.id == sos_id).first()
+    if not sos:
+        sos = db.query(SOSEventModel).filter(SOSEventModel.incident_id == sos_id).first()
+    if not sos:
+        raise HTTPException(status_code=404, detail=f"SOS event {sos_id} not found")
+
+    actual_sos_id = sos.id
+    incident_id = sos.incident_id
+
+    db.delete(sos)
+
+    # If linked incident exists, delete it too and any matching SOS events
+    if incident_id:
+        other_sos = (
+            db.query(SOSEventModel)
+            .filter(SOSEventModel.incident_id == incident_id, SOSEventModel.id != actual_sos_id)
+            .all()
+        )
+        for s in other_sos:
+            db.delete(s)
+
+        inc = db.query(IncidentModel).filter(IncidentModel.id == incident_id).first()
+        if inc:
+            db.delete(inc)
+            await manager.broadcast("incident_deleted", {"id": incident_id})
+
+    db.commit()
+
+    await manager.broadcast("sos_deleted", {"id": actual_sos_id, "incident_id": incident_id})
+    return {"status": "success", "message": f"SOS event {actual_sos_id} deleted", "id": actual_sos_id}
+
