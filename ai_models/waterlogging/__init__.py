@@ -1,1 +1,0 @@
-"""Waterlogging detection model placeholder."""

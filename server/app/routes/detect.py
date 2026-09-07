@@ -526,7 +526,9 @@ def get_traffic_model():
     global _traffic_model
     if _traffic_model is None:
         helios_root = Path(__file__).resolve().parents[3]
-        weights = helios_root / "ai_models" / "vehicle_detection" / "yolo26n.pt"
+        weights = helios_root / "ai_models" / "vehicle_detection" / "weights" / "yolo26n.pt"
+        if not weights.exists():
+            weights = helios_root / "ai_models" / "vehicle_detection" / "yolo26n.pt"
         if not weights.exists():
             raise FileNotFoundError(f"Traffic model weights not found: {weights}")
         _traffic_model = YOLO(str(weights))
