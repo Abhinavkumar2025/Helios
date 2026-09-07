@@ -1,0 +1,14 @@
+path: E:/SIH26/Helios/ai_models/accident
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 5
+names: ['-', '- collaborate with your team on computer vision projects', 'Car Crash Severity Detection - v13 Version 11 - with background', 'Roboflow is an end-to-end computer vision platform that helps you', 'This dataset was exported via roboflow.com on October 23- 2023 at 8-27 AM GMT']
+
+roboflow:
+  workspace: robovision-hakud
+  project: road-accident-xolvf
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/robovision-hakud/road-accident-xolvf/dataset/1
