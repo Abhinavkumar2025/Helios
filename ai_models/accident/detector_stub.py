@@ -1,7 +1,7 @@
 import io
 import glob
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 from PIL import Image
@@ -83,20 +83,27 @@ class JetsonAccidentDetector:
         results = self.model.predict(source=image, verbose=False)
 
         raw_confidence = 0.0
+        detected_boxes_count = 0
+        crash_boxes_count = 0
         if results and len(results) > 0:
             result = results[0]
             names = result.names  # mapping from int to class name string
+            detected_boxes_count = len(result.boxes)
             for box in result.boxes:
                 cls_id = int(box.cls[0].item())
                 cls_name = names.get(cls_id, "")
                 conf = float(box.conf[0].item())
 
-                # Check exact class name or crash identifier
-                if cls_name == self.target_class_name or "Car Crash" in cls_name:
-                    if conf > raw_confidence:
-                        raw_confidence = conf
+                # All detection classes in this dedicated accident model represent crash detections
+                crash_boxes_count += 1
+                if conf > raw_confidence:
+                    raw_confidence = conf
 
         confidence = raw_confidence
+        self.last_raw_confidence = raw_confidence
+        self.last_results = results
+        self.last_boxes_count = detected_boxes_count
+        self.last_crash_boxes_count = crash_boxes_count
 
         # Deceleration signal fusion:
         # If speed_kmh drops >= 25 km/h since last frame AND detection confidence > 0.4,
@@ -130,7 +137,7 @@ class JetsonAccidentDetector:
         try:
             media_dir = helios_root / "server" / "media"
             os.makedirs(media_dir, exist_ok=True)
-            output_filename = f"accident_{int(datetime.utcnow().timestamp())}.jpg"
+            output_filename = f"accident_{int(datetime.now(timezone.utc).timestamp())}.jpg"
             output_path = media_dir / output_filename
             latest_path = media_dir / "latest_accident.jpg"
             
@@ -150,7 +157,7 @@ class JetsonAccidentDetector:
             "confidence": round(float(confidence), 4),
             "severity": severity,
             "gps": {"lat": lat, "lng": lng},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "camera": camera_id,
             "image_url": image_url,
             "video_url": None,
@@ -166,3 +173,79 @@ class JetsonAccidentDetector:
         endpoint = f"{self.server_url.rstrip('/')}/detect/accident"
         response = requests.post(endpoint, json=payload, timeout=5)
         return response
+
+
+if __name__ == "__main__":
+    import sys
+    import json
+
+    # Determine image path from command line arguments
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+        img_path = Path(sys.argv[1]).resolve()
+    else:
+        # Default sample image
+        base_dir = Path(__file__).resolve().parent
+        helios_root = base_dir.parent.parent
+        img_path = helios_root / "model_Test_my_image" / "sample_car_accident.jpg"
+
+    if not img_path.exists():
+        print(f"[!] Error: Image file not found: {img_path}")
+        sys.exit(1)
+
+    print("=" * 65)
+    print("  HELIOS JETSON ACCIDENT DETECTOR (DIRECT RUN)")
+    print("=" * 65)
+    print(f"[*] Target Image : {img_path}")
+
+    # Read binary bytes of the target image
+    with open(img_path, "rb") as f:
+        frame_bytes = f.read()
+
+    detector = JetsonAccidentDetector(bus_id="BUS-TEST-01")
+
+    # Optional: Check if user passed --boost or simulate sudden deceleration (e.g. vehicle braking abruptly from 60 to 20 km/h)
+    simulate_brake = "--decel" in sys.argv or "-d" in sys.argv
+    if simulate_brake:
+        print("[*] Simulating telemetry: vehicle sudden deceleration (-40 km/h)")
+        detector.last_speed_kmh = 60.0
+        speed_now = 20.0
+    else:
+        speed_now = 40.0
+
+    print("[*] Processing frame with YOLO accident model...")
+    payload = detector.process_frame(
+        frame_bytes=frame_bytes,
+        lat=17.4422,
+        lng=78.3923,
+        speed_kmh=speed_now
+    )
+
+    print("\n" + "-" * 65)
+    print("[DETECTION BREAKDOWN]:")
+    print("-" * 65)
+    raw_conf = getattr(detector, "last_raw_confidence", 0.0)
+    total_boxes = getattr(detector, "last_boxes_count", 0)
+    crash_boxes = getattr(detector, "last_crash_boxes_count", 0)
+    print(f"--> Total Objects Found     : {total_boxes} box(es)")
+    print(f"--> Car Crash Detections    : {crash_boxes} box(es)")
+    print(f"--> Peak Crash Confidence   : {raw_conf:.1%}")
+    if total_boxes > 0 and crash_boxes == 0:
+        print("    [!] The AI detected objects in the image, but none were recognized as a 'Car Crash'.")
+    if simulate_brake:
+        print(f"--> Sensor Telemetry Boost  : +20.0% (Triggered by >=25 km/h speed drop)")
+
+    print("\n" + "-" * 65)
+    print("[RETURNED PAYLOAD]:")
+    print("-" * 65)
+    if payload:
+        print(json.dumps(payload, indent=2))
+        print(f"\n--> STATUS: [ACCIDENT TRIGGERED]")
+        print(f"--> Severity Level : {payload['severity'].upper()}")
+        print(f"--> Final Confidence: {payload['confidence']:.1%}")
+    else:
+        print("None")
+        print("\n--> STATUS: Filtered by 75% threshold gate.")
+        print(f"    (Model visual confidence was {raw_conf:.1%}, which is < 75% trigger gate.")
+        print("     Pass '--decel' to simulate sudden braking deceleration boost)")
+    print("=" * 65)
+
