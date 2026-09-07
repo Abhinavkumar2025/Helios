@@ -53,12 +53,10 @@ helios.db
 # Media & Temporary AI Outputs
 server/media/*
 !server/media/.gitkeep
-model_Test_my_image/*
-!model_Test_my_image/README.txt
-!model_Test_my_image/sample_car_accident.jpg
-!model_Test_my_image/results/
-model_Test_my_image/results/*
-!model_Test_my_image/results/.gitkeep
+# Standalone AI Testing Tools & Local Test Folders
+visualize_detection.py
+test_my_images.py
+model_Test_my_image/
 accident_result.jpg
 detected_preview.jpg
 detect_demo/
