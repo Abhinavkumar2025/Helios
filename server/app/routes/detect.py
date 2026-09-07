@@ -339,3 +339,157 @@ async def upload_and_detect_pothole(
             else "No pothole detected in this image."
         ),
     }
+
+
+# ──────────────────────────────────────────────────────────────────
+#  WATERLOGGING MODEL – Real YOLO-Seg Inference on Uploaded Image
+# ──────────────────────────────────────────────────────────────────
+
+_waterlog_model = None
+
+
+def get_waterlog_model():
+    global _waterlog_model
+    if _waterlog_model is None:
+        helios_root = Path(__file__).resolve().parents[3]
+        weights = helios_root / "ai_models" / "waterlogging" / "weights" / "waterlog_best.pt"
+        if not weights.exists():
+            raise FileNotFoundError(f"Waterlogging model weights not found: {weights}")
+        _waterlog_model = YOLO(str(weights))
+    return _waterlog_model
+
+
+def _evaluate_waterlog_hazard(road_coverage_pct: float, mean_conf: float):
+    """Classify waterlogging hazard level based on coverage and confidence."""
+    w_score = round(road_coverage_pct * mean_conf, 2)
+    if w_score < 5.0 or road_coverage_pct < 3.0:
+        return "low", "CLEAR / DRY", w_score, False
+    elif w_score < 20.0:
+        return "medium", "MINOR ACCUMULATION", w_score, False
+    elif w_score < 40.0:
+        return "high", "MODERATE WATERLOGGING", w_score, True
+    else:
+        return "critical", "CRITICAL HAZARD (FLOODED)", w_score, True
+
+
+@router.post("/waterlogging/upload")
+async def upload_and_detect_waterlogging(
+    file: UploadFile = File(...),
+    bus_id: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload an image for AI waterlogging detection using the trained YOLO-Seg
+    model. Processes segmentation masks to calculate road water coverage,
+    hazard score, and severity. Creates incident and broadcasts via WebSocket.
+    """
+    import numpy as np
+    import cv2
+
+    try:
+        content = await file.read()
+        image = Image.open(io.BytesIO(content)).convert("RGB")
+        image_np = np.array(image)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
+
+    start_time = time.time()
+    model = get_waterlog_model()
+
+    h, w_img = image_np.shape[:2]
+    roi_top = int(h * 0.25)
+    roi_bottom = int(h * 0.95)
+    road_pixels = (roi_bottom - roi_top) * w_img
+
+    results = model.predict(source=image_np, conf=0.42, imgsz=640, verbose=False)
+    latency_ms = round((time.time() - start_time) * 1000, 1)
+
+    result = results[0]
+
+    full_mask = np.zeros((h, w_img), dtype=np.uint8)
+    confidence_scores = []
+    min_area_px = 8000
+
+    if result.masks is not None and result.boxes is not None:
+        boxes_conf = result.boxes.conf.cpu().numpy()
+        for idx, mask_t in enumerate(result.masks.data):
+            m = cv2.resize(
+                mask_t.cpu().numpy().astype(np.uint8),
+                (w_img, h),
+                interpolation=cv2.INTER_NEAREST,
+            )
+            if np.count_nonzero(m[roi_top:roi_bottom, :]) >= min_area_px:
+                full_mask = np.bitwise_or(full_mask, m)
+                confidence_scores.append(float(boxes_conf[idx]))
+
+    road_mask = full_mask[roi_top:roi_bottom, :]
+    water_px = int(np.count_nonzero(road_mask))
+    road_coverage_pct = round(
+        (water_px / road_pixels) * 100.0 if road_pixels > 0 else 0.0, 2
+    )
+    mean_conf = round(float(np.mean(confidence_scores)), 4) if confidence_scores else 0.0
+
+    severity, severity_title, w_score, needs_alert = _evaluate_waterlog_hazard(
+        road_coverage_pct, mean_conf
+    )
+    waterlog_detected = road_coverage_pct > 3.0 and mean_conf > 0.0
+
+    # Save annotated media
+    helios_root = Path(__file__).resolve().parents[3]
+    media_dir = helios_root / "server" / "media"
+    os.makedirs(media_dir, exist_ok=True)
+
+    timestamp = int(time.time())
+    output_filename = f"waterlog_{timestamp}.jpg"
+    output_path = media_dir / output_filename
+
+    # Overlay water mask on image
+    overlay = image_np.copy()
+    overlay[full_mask == 1] = [255, 191, 0]  # Amber waterlogging overlay
+    annotated = cv2.addWeighted(overlay, 0.45, image_np, 0.55, 0)
+    annotated_img = Image.fromarray(annotated)
+    annotated_img.save(str(output_path))
+
+    image_url = f"http://localhost:8000/media/{output_filename}"
+
+    incident_response = None
+    target_bus = bus_id or f"BUS-HYD-{random.randint(100, 999)}"
+
+    if waterlog_detected:
+        payload = IncidentCreate(
+            bus_id=target_bus,
+            event_type="waterlogging",
+            confidence=round(mean_conf, 4),
+            severity=severity,
+            gps={"lat": 17.4450, "lng": 78.3880},
+            camera="front",
+            image_url=image_url,
+            model="waterlog-yolo-seg",
+            status="detected",
+            notes=f"Waterlogging detected: {severity_title}. "
+                  f"Road coverage: {road_coverage_pct}%, "
+                  f"Hazard score: {w_score}",
+        )
+        incident_response = await create_incident(payload, db)
+        await manager.broadcast("incident_created", incident_response.dict())
+
+    return {
+        "success": True,
+        "detected": waterlog_detected,
+        "confidence": round(mean_conf, 4),
+        "severity": severity,
+        "severity_title": severity_title,
+        "road_coverage_pct": road_coverage_pct,
+        "water_hazard_score": w_score,
+        "needs_alert": needs_alert,
+        "latency_ms": latency_ms,
+        "image_url": image_url if waterlog_detected else None,
+        "bus_id": target_bus,
+        "incident": incident_response.dict() if incident_response else None,
+        "message": (
+            f"Waterlogging detected: {severity_title} "
+            f"(Coverage: {road_coverage_pct}%, Score: {w_score})"
+            if waterlog_detected
+            else "No significant waterlogging detected in this image."
+        ),
+    }
