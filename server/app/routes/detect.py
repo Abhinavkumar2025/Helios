@@ -493,3 +493,203 @@ async def upload_and_detect_waterlogging(
             else "No significant waterlogging detected in this image."
         ),
     }
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  VEHICLE / TRAFFIC MODEL – Real YOLO Inference + Density Computation
+# ──────────────────────────────────────────────────────────────────────
+
+_traffic_model = None
+
+VEHICLE_CLASSES = {1: "bicycle", 2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
+VEHICLE_PCU_WEIGHTS = {1: 0.5, 2: 1.0, 3: 0.5, 5: 3.5, 7: 3.0}
+
+
+def get_traffic_model():
+    global _traffic_model
+    if _traffic_model is None:
+        helios_root = Path(__file__).resolve().parents[3]
+        weights = helios_root / "ai_models" / "vehicle_detection" / "yolo26n.pt"
+        if not weights.exists():
+            raise FileNotFoundError(f"Traffic model weights not found: {weights}")
+        _traffic_model = YOLO(str(weights))
+    return _traffic_model
+
+
+def _compute_traffic_density(detections, img_shape, road_length_m=65.0, lanes=2):
+    """Calibrated non-linear density engine from vehicle_detection model."""
+    import numpy as np
+
+    if not detections:
+        return 0.0, 0.0, "Low (Free Flow)"
+
+    img_h, img_w = img_shape[:2]
+    total_img_area = float(img_h * img_w)
+
+    detected_classes = [d["class_id"] for d in detections]
+    total_pcu = sum(VEHICLE_PCU_WEIGHTS.get(c, 1.0) for c in detected_classes)
+    n_vehicles = len(detections)
+
+    total_vehicle_pixel_area = sum(d["area"] for d in detections)
+    occupancy_ratio = min(1.0, total_vehicle_pixel_area / (total_img_area * 0.75))
+
+    jam_buffer_m = 7.0
+    nominal_pcu_cap = (road_length_m / jam_buffer_m) * lanes
+    load_ratio = total_pcu / nominal_pcu_cap
+
+    y_coords = [d["bbox"][1] for d in detections]
+    vertical_span = (max(y_coords) - min(y_coords)) / float(img_h) if y_coords else 0
+
+    stress_index = (0.55 * occupancy_ratio) + (0.45 * min(1.6, load_ratio))
+    if vertical_span > 0.45 and n_vehicles >= 10:
+        stress_index += 0.12
+
+    if stress_index < 0.40:
+        density_pct = (stress_index / 0.40) * 38.0
+    elif stress_index < 0.75:
+        density_pct = 38.0 + ((stress_index - 0.40) / 0.35) * 34.0
+    else:
+        excess = stress_index - 0.75
+        saturation_curve = 1.0 - np.exp(-1.8 * excess)
+        density_pct = 78.0 + (saturation_curve * 19.5)
+
+    density_pct = min(98.5, max(5.0, density_pct))
+
+    if density_pct < 40.0:
+        status = "Low (Free Flow)"
+    elif density_pct < 75.0:
+        status = "Moderate"
+    else:
+        status = "Heavy (Congestion)"
+
+    return round(float(density_pct), 2), round(float(total_pcu), 1), status
+
+
+@router.post("/traffic/upload")
+async def upload_and_detect_traffic(
+    file: UploadFile = File(...),
+    bus_id: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload an image for AI vehicle detection and traffic density analysis
+    using the trained YOLO model. Counts vehicles by class, computes PCU
+    and congestion density, creates incident, and broadcasts via WebSocket.
+    """
+    try:
+        content = await file.read()
+        image = Image.open(io.BytesIO(content)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
+
+    start_time = time.time()
+    model = get_traffic_model()
+    results = model.predict(
+        source=image,
+        classes=list(VEHICLE_PCU_WEIGHTS.keys()),
+        conf=0.30,
+        iou=0.45,
+        imgsz=1024,
+        verbose=False,
+    )
+    latency_ms = round((time.time() - start_time) * 1000, 1)
+
+    result = results[0]
+    boxes = result.boxes
+
+    detected_vehicles: List[Dict[str, Any]] = []
+    breakdown = {name: 0 for name in VEHICLE_CLASSES.values()}
+
+    if boxes is not None:
+        for box in boxes:
+            cls_id = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            xyxy = [round(float(c), 1) for c in box.xyxy[0].tolist()]
+            w = xyxy[2] - xyxy[0]
+            h = xyxy[3] - xyxy[1]
+            area = w * h
+
+            cls_name = VEHICLE_CLASSES.get(cls_id, "vehicle")
+            if cls_name in breakdown:
+                breakdown[cls_name] += 1
+
+            detected_vehicles.append({
+                "class_id": cls_id,
+                "class_name": cls_name,
+                "confidence": round(conf, 4),
+                "bbox": xyxy,
+                "area": round(area, 1),
+            })
+
+    import numpy as np
+    img_shape = (np.array(image).shape[0], np.array(image).shape[1])
+    density_pct, total_pcu, congestion_status = _compute_traffic_density(
+        detected_vehicles, img_shape
+    )
+
+    # Save annotated media
+    helios_root = Path(__file__).resolve().parents[3]
+    media_dir = helios_root / "server" / "media"
+    os.makedirs(media_dir, exist_ok=True)
+
+    timestamp = int(time.time())
+    output_filename = f"traffic_{timestamp}.jpg"
+    output_path = media_dir / output_filename
+
+    annotated_bgr = result.plot()
+    annotated_rgb = annotated_bgr[..., ::-1]
+    annotated_img = Image.fromarray(annotated_rgb)
+    annotated_img.save(str(output_path))
+
+    image_url = f"http://localhost:8000/media/{output_filename}"
+
+    # Severity based on density
+    if density_pct >= 75:
+        severity = "critical"
+    elif density_pct >= 50:
+        severity = "high"
+    elif density_pct >= 30:
+        severity = "medium"
+    else:
+        severity = "low"
+
+    incident_response = None
+    target_bus = bus_id or f"BUS-HYD-{random.randint(100, 999)}"
+    n_vehicles = len(detected_vehicles)
+
+    if n_vehicles > 0:
+        payload = IncidentCreate(
+            bus_id=target_bus,
+            event_type="traffic",
+            confidence=round(density_pct / 100.0, 4),
+            severity=severity,
+            gps={"lat": 17.4435, "lng": 78.3860},
+            camera="front",
+            image_url=image_url,
+            model="traffic-yolo-density",
+            status="detected",
+            notes=f"Traffic analysis: {congestion_status}. "
+                  f"{n_vehicles} vehicles detected, {total_pcu} PCU, "
+                  f"Density: {density_pct}%",
+        )
+        incident_response = await create_incident(payload, db)
+        await manager.broadcast("incident_created", incident_response.dict())
+
+    return {
+        "success": True,
+        "vehicles_detected": n_vehicles,
+        "density_pct": density_pct,
+        "total_pcu": total_pcu,
+        "congestion_status": congestion_status,
+        "severity": severity,
+        "breakdown": breakdown,
+        "latency_ms": latency_ms,
+        "boxes": detected_vehicles,
+        "image_url": image_url,
+        "bus_id": target_bus,
+        "incident": incident_response.dict() if incident_response else None,
+        "message": (
+            f"Traffic analysis complete: {congestion_status} "
+            f"({n_vehicles} vehicles, {density_pct}% density)"
+        ),
+    }
