@@ -14,10 +14,12 @@ import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { StatCard } from "../components/ui/StatCard";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
+import { useHeliosWebSocket } from "../context/WebSocketContext";
 import { fetchIncidents, updateIncident } from "../services/incidents";
 import { Incident } from "../types";
 
 export const Waterlogging: React.FC = () => {
+  const { subscribe } = useHeliosWebSocket();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -37,7 +39,32 @@ export const Waterlogging: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+
+    const unsubNew = subscribe("incident_created", (newInc: Incident) => {
+      if (newInc && newInc.event_type === "waterlogging") {
+        setIncidents((prev) => {
+          if (prev.some((i) => i.id === newInc.id)) return prev;
+          return [newInc, ...prev];
+        });
+      }
+    });
+
+    const unsubUpd = subscribe("incident_updated", (updInc: Incident) => {
+      if (updInc && updInc.event_type === "waterlogging") {
+        setIncidents((prev) =>
+          prev.map((i) => (i.id === updInc.id ? { ...i, ...updInc } : i))
+        );
+        if (selectedIncident?.id === updInc.id) {
+          setSelectedIncident((prev) => (prev ? { ...prev, ...updInc } : null));
+        }
+      }
+    });
+
+    return () => {
+      unsubNew();
+      unsubUpd();
+    };
+  }, [subscribe]);
 
   const handleResolve = async (id: string) => {
     try {

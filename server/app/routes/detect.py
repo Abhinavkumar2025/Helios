@@ -129,14 +129,18 @@ async def upload_and_detect(
         cls_id = int(box.cls[0].item())
         conf = float(box.conf[0].item())
         xyxy = [round(float(c), 1) for c in box.xyxy[0].tolist()]
+        # Roboflow export artifact classes (comments/watermarks)
+        cls_name = names.get(cls_id, "")
+        if "roboflow" in cls_name.lower() or "collaborate" in cls_name.lower() or "exported" in cls_name.lower():
+            continue
 
-        # All classes in this dedicated accident detection model represent crash detections
+        # All valid detections in this dedicated accident model represent crash events
         is_crash = True
         crash_detected = True
         if conf > max_conf:
             max_conf = conf
 
-        clean_label = ACCIDENT_CLASS_NAMES.get(cls_id, names.get(cls_id, "Vehicle Crash"))
+        clean_label = ACCIDENT_CLASS_NAMES.get(cls_id, "Traffic Collision")
 
         detected_boxes.append({
             "class_id": cls_id,
@@ -343,7 +347,7 @@ async def upload_and_detect_pothole(
         "severity": severity,
         "latency_ms": latency_ms,
         "boxes": detected_boxes,
-        "image_url": image_url if pothole_detected else None,
+        "image_url": image_url,
         "bus_id": target_bus,
         "incident": incident_response.dict() if incident_response else None,
         "message": (
@@ -496,7 +500,7 @@ async def upload_and_detect_waterlogging(
         "water_hazard_score": w_score,
         "needs_alert": needs_alert,
         "latency_ms": latency_ms,
-        "image_url": image_url if waterlog_detected else None,
+        "image_url": image_url,
         "bus_id": target_bus,
         "incident": incident_response.dict() if incident_response else None,
         "message": (

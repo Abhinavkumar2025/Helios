@@ -1,4 +1,4 @@
-﻿import os
+import os
 
 CONFIG = {
     # Model Weights
@@ -19,5 +19,5 @@ CONFIG = {
 
     # Edge Telemetry Metadata
     "device_id": "EDGE-BUS-01",
-    "default_gps": {"lat": 16.5062, "lon": 80.6480}
+    "default_gps": {"lat": 16.5062, "lng": 80.6480, "lon": 80.6480}
 }
