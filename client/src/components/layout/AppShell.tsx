@@ -2,7 +2,6 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { TopNav } from "./TopNav";
-import { DemoControlBar } from "./DemoControlBar";
 import { EmergencyAlertModal } from "./EmergencyAlertModal";
 import { motion } from "framer-motion";
 
@@ -15,7 +14,6 @@ export const AppShell: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <TopNav />
-        <DemoControlBar />
 
         {/* Emergency Alert Modal mounted for immediate event broadcast reaction */}
         <EmergencyAlertModal />

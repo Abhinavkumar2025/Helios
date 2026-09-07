@@ -10,7 +10,10 @@ import requests
 from ultralytics import YOLO
 
 # 1. Load Pretrained YOLO Model
-model = YOLO("yolo26n.pt")
+_weights_path = Path(__file__).resolve().parent / "weights" / "yolo26n.pt"
+if not _weights_path.exists():
+    _weights_path = Path(__file__).resolve().parent / "yolo26n.pt"
+model = YOLO(str(_weights_path) if _weights_path.exists() else "yolo26n.pt")
 
 VEHICLE_WEIGHTS = {
     1: 0.5,  # bicycle

@@ -3,30 +3,45 @@ import {
   Droplets,
   AlertTriangle,
   CheckCircle2,
-  MapPin,
   RefreshCw,
   Waves,
   ShieldAlert,
   Navigation,
+  Trash2,
 } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { StatCard } from "../components/ui/StatCard";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
-import { fetchIncidents, updateIncident } from "../services/incidents";
+import { useHeliosWebSocket } from "../context/WebSocketContext";
+import {
+  fetchIncidents,
+  updateIncident,
+  deleteIncident,
+} from "../services/incidents";
 import { Incident } from "../types";
 
 export const Waterlogging: React.FC = () => {
+  const { subscribe } = useHeliosWebSocket();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
+    null
+  );
   const [divertAlertSent, setDivertAlertSent] = useState(false);
+  const [incidentToDelete, setIncidentToDelete] = useState<Incident | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await fetchIncidents({ event_type: "waterlogging", limit: 50 });
+      const data = await fetchIncidents({
+        event_type: "waterlogging",
+        limit: 50,
+      });
       setIncidents(data);
     } catch (err) {
       console.error("Error loading waterlogging incidents", err);
@@ -37,22 +52,77 @@ export const Waterlogging: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+
+    const unsubNew = subscribe("incident_created", (newInc: Incident) => {
+      if (newInc && newInc.event_type === "waterlogging") {
+        setIncidents((prev) => {
+          if (prev.some((i) => i.id === newInc.id)) return prev;
+          return [newInc, ...prev];
+        });
+      }
+    });
+
+    const unsubUpd = subscribe("incident_updated", (updInc: Incident) => {
+      if (updInc && updInc.event_type === "waterlogging") {
+        setIncidents((prev) =>
+          prev.map((i) => (i.id === updInc.id ? { ...i, ...updInc } : i))
+        );
+        if (selectedIncident?.id === updInc.id) {
+          setSelectedIncident((prev) => (prev ? { ...prev, ...updInc } : null));
+        }
+      }
+    });
+
+    return () => {
+      unsubNew();
+      unsubUpd();
+    };
+  }, [subscribe]);
 
   const handleResolve = async (id: string) => {
     try {
       const updated = await updateIncident(id, { status: "resolved" });
-      setIncidents((prev) => prev.map((i) => (i.id === id ? updated : i)));
+      setIncidents((prev) =>
+        prev.map((i) => (i.id === id ? updated : i))
+      );
       if (selectedIncident?.id === id) setSelectedIncident(updated);
     } catch (err: any) {
       alert(`Action failed: ${err.message}`);
     }
   };
 
-  const activeCount = incidents.filter((i) => i.status !== "resolved").length;
-  const highSeverityCount = incidents.filter((i) => i.severity === "high" || i.severity === "critical").length;
-  const blockedRoads = incidents.filter((i) => i.metadata_json?.includes("true")).length || 3;
-  const resolvedCount = incidents.filter((i) => i.status === "resolved").length;
+  const handleDelete = async (incident: Incident) => {
+    try {
+      setIsDeleting(true);
+      await deleteIncident(incident.id);
+
+      setIncidents((prev) =>
+        prev.filter((i) => i.id !== incident.id)
+      );
+
+      setIncidentToDelete(null);
+      setSelectedIncident(null);
+    } catch (err: any) {
+      alert(`Failed to delete waterlogging incident: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const activeCount = incidents.filter(
+    (i) => i.status !== "resolved"
+  ).length;
+
+  const highSeverityCount = incidents.filter(
+    (i) => i.severity === "high" || i.severity === "critical"
+  ).length;
+
+  const blockedRoads =
+    incidents.filter((i) => i.metadata_json?.includes("true")).length || 3;
+
+  const resolvedCount = incidents.filter(
+    (i) => i.status === "resolved"
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -72,7 +142,9 @@ export const Waterlogging: React.FC = () => {
           onClick={loadData}
           className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-helios-850 hover:bg-slate-800 text-slate-300 text-xs font-mono border border-slate-700 cursor-pointer"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh Water Inundation Feed
         </button>
       </div>
@@ -88,6 +160,7 @@ export const Waterlogging: React.FC = () => {
           color="cyan"
           activePulse={activeCount > 0}
         />
+
         <StatCard
           label="High Severity (>15cm)"
           value={highSeverityCount}
@@ -96,6 +169,7 @@ export const Waterlogging: React.FC = () => {
           trendUp={false}
           color="red"
         />
+
         <StatCard
           label="Roads Blocked / Impassable"
           value={blockedRoads}
@@ -104,6 +178,7 @@ export const Waterlogging: React.FC = () => {
           trendUp={false}
           color="amber"
         />
+
         <StatCard
           label="Cleared / Resolved"
           value={resolvedCount}
@@ -130,6 +205,7 @@ export const Waterlogging: React.FC = () => {
                 <th className="pb-3 font-semibold text-right">Action</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-800/60">
               {loading && incidents.length === 0 ? (
                 <tr>
@@ -139,7 +215,10 @@ export const Waterlogging: React.FC = () => {
                 </tr>
               ) : incidents.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 font-mono">
+                  <td
+                    colSpan={8}
+                    className="py-12 text-center text-slate-500 font-mono"
+                  >
                     No waterlogging alerts currently detected.
                   </td>
                 </tr>
@@ -156,21 +235,37 @@ export const Waterlogging: React.FC = () => {
                     <td className="py-3.5 font-bold text-white group-hover:text-cyan-400">
                       {inc.id}
                     </td>
-                    <td className="py-3.5 font-semibold text-slate-200">{inc.bus_id}</td>
+
+                    <td className="py-3.5 font-semibold text-slate-200">
+                      {inc.bus_id}
+                    </td>
+
                     <td className="py-3.5 text-cyan-400 font-bold">
                       {Math.round(inc.confidence * 100)}%
                     </td>
+
                     <td className="py-3.5 text-white font-bold">
                       ~14-18 cm depth
                     </td>
+
                     <td className="py-3.5 text-slate-400">
                       {inc.gps.lat.toFixed(4)}, {inc.gps.lng.toFixed(4)}
                     </td>
+
                     <td className="py-3.5">
-                      <Badge variant={inc.severity === "critical" ? "danger" : "warning"}>
-                        {inc.severity === "critical" ? "BLOCKED" : "SLOW TRAFFIC"}
+                      <Badge
+                        variant={
+                          inc.severity === "critical"
+                            ? "danger"
+                            : "warning"
+                        }
+                      >
+                        {inc.severity === "critical"
+                          ? "BLOCKED"
+                          : "SLOW TRAFFIC"}
                       </Badge>
                     </td>
+
                     <td className="py-3.5">
                       <span
                         className={`capitalize px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -182,8 +277,9 @@ export const Waterlogging: React.FC = () => {
                         {inc.status}
                       </span>
                     </td>
+
                     <td className="py-3.5 text-right">
-                      {inc.status !== "resolved" && (
+                      {inc.status !== "resolved" ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -192,6 +288,18 @@ export const Waterlogging: React.FC = () => {
                           className="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-bold uppercase transition-colors cursor-pointer"
                         >
                           Mark Cleared
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIncidentToDelete(inc);
+                          }}
+                          disabled={isDeleting}
+                          className="px-2.5 py-1 rounded bg-slate-800/80 hover:bg-red-950/60 text-red-400 border border-slate-700 text-[10px] font-mono font-bold uppercase transition-all cursor-pointer flex items-center gap-1 ml-auto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
                         </button>
                       )}
                     </td>
@@ -203,7 +311,7 @@ export const Waterlogging: React.FC = () => {
         </div>
       </Card>
 
-      {/* Modal */}
+      {/* Existing Detail Modal */}
       <Modal
         isOpen={selectedIncident !== null}
         onClose={() => setSelectedIncident(null)}
@@ -211,7 +319,9 @@ export const Waterlogging: React.FC = () => {
           selectedIncident ? (
             <div className="flex items-center gap-2 font-mono text-cyan-400">
               <Droplets className="w-5 h-5" />
-              <span>WATERLOGGING REPORT // {selectedIncident.id}</span>
+              <span>
+                WATERLOGGING REPORT // {selectedIncident.id}
+              </span>
             </div>
           ) : ""
         }
@@ -232,19 +342,31 @@ export const Waterlogging: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-2 text-slate-300">
               <div className="p-3 rounded-lg bg-helios-850 border border-slate-800">
-                <span className="text-slate-500 uppercase text-[10px] block">Bus Detection</span>
-                <span className="font-bold text-white text-sm">{selectedIncident.bus_id}</span>
+                <span className="text-slate-500 uppercase text-[10px] block">
+                  Bus Detection
+                </span>
+                <span className="font-bold text-white text-sm">
+                  {selectedIncident.bus_id}
+                </span>
               </div>
+
               <div className="p-3 rounded-lg bg-helios-850 border border-slate-800">
-                <span className="text-slate-500 uppercase text-[10px] block">Estimated Water Depth</span>
-                <span className="font-bold text-cyan-400 text-sm">~16 cm Inundated</span>
+                <span className="text-slate-500 uppercase text-[10px] block">
+                  Estimated Water Depth
+                </span>
+                <span className="font-bold text-cyan-400 text-sm">
+                  ~16 cm Inundated
+                </span>
               </div>
             </div>
 
             {divertAlertSent && (
               <div className="p-3 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Traffic Diversion Advisory Broadcast to Navigation Radios & Variable Message Signs!</span>
+                <span>
+                  Traffic Diversion Advisory Broadcast to Navigation Radios &
+                  Variable Message Signs!
+                </span>
               </div>
             )}
 
@@ -256,6 +378,7 @@ export const Waterlogging: React.FC = () => {
                 <Navigation className="w-3.5 h-3.5" />
                 Issue Traffic Diversion Advisory
               </button>
+
               {selectedIncident.status !== "resolved" && (
                 <button
                   onClick={() => handleResolve(selectedIncident.id)}
@@ -265,6 +388,50 @@ export const Waterlogging: React.FC = () => {
                   Mark Cleared
                 </button>
               )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <Modal
+        isOpen={incidentToDelete !== null}
+        onClose={() => !isDeleting && setIncidentToDelete(null)}
+        title={
+          <div className="flex items-center gap-2 font-mono text-red-400">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <span>CONFIRM WATERLOGGING DELETION</span>
+          </div>
+        }
+        maxWidth="md"
+      >
+        {incidentToDelete && (
+          <div className="space-y-4 font-mono">
+            <p className="text-sm text-slate-300">
+              Permanently delete{" "}
+              <strong className="text-white">
+                {incidentToDelete.id}
+              </strong>
+              ?
+            </p>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setIncidentToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => handleDelete(incidentToDelete)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         )}

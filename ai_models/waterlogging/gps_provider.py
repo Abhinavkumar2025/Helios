@@ -7,13 +7,15 @@ def _get_ip_location():
     """Secondary network fallback if Windows location service is unavailable."""
     try:
         resp = requests.get("https://ipapi.co/json/", timeout=3).json()
+        lon_val = round(resp.get("longitude", 72.8777), 6)
         return {
             "lat": round(resp.get("latitude", 19.0760), 6),
-            "lon": round(resp.get("longitude", 72.8777), 6),
+            "lng": lon_val,
+            "lon": lon_val,
             "source": "Laptop_IP_Network"
         }
     except Exception:
-        return {"lat": 19.0760, "lon": 72.8777, "source": "Default_Fallback"}
+        return {"lat": 19.0760, "lng": 72.8777, "lon": 72.8777, "source": "Default_Fallback"}
 
 async def _get_windows_native_location():
     """Queries Windows 10/11 native location service."""
@@ -26,9 +28,11 @@ async def _get_windows_native_location():
     geolocator = Geolocator()
     pos = await geolocator.get_geoposition_async()
     coord = pos.coordinate.point.position
+    lon_val = round(coord.longitude, 6)
     return {
         "lat": round(coord.latitude, 6),
-        "lon": round(coord.longitude, 6),
+        "lng": lon_val,
+        "lon": lon_val,
         "source": "Laptop_Windows_GPS"
     }
 
@@ -60,9 +64,11 @@ def extract_exif_gps(image_path):
             lat = -lat
         if tags["GPS GPSLongitudeRef"].values == "W":
             lon = -lon
+        lon_val = round(lon, 6)
         return {
             "lat": round(lat, 6),
-            "lon": round(lon, 6),
+            "lng": lon_val,
+            "lon": lon_val,
             "source": "Image_EXIF_GPS"
         }
     except Exception:
@@ -76,10 +82,12 @@ def resolve_gps_coordinates(image_path, explicit_gps=None, index_jitter=0):
     3. Laptop current GPS (with slight indexing jitter across frames for fleet spread)
     """
     # 1. Explicit GPS provided
-    if explicit_gps and "lat" in explicit_gps and "lon" in explicit_gps:
+    if explicit_gps and "lat" in explicit_gps and ("lng" in explicit_gps or "lon" in explicit_gps):
+        lon_val = explicit_gps.get("lng", explicit_gps.get("lon"))
         return {
             "lat": explicit_gps["lat"],
-            "lon": explicit_gps["lon"],
+            "lng": lon_val,
+            "lon": lon_val,
             "source": explicit_gps.get("source", "Explicit_Payload")
         }
 
@@ -92,8 +100,10 @@ def resolve_gps_coordinates(image_path, explicit_gps=None, index_jitter=0):
     laptop_loc = get_laptop_gps()
     jitter_lat = index_jitter * 0.0012
     jitter_lon = index_jitter * 0.0010
+    lon_val = round(laptop_loc.get("lng", laptop_loc.get("lon", 72.8777)) + jitter_lon, 6)
     return {
         "lat": round(laptop_loc["lat"] + jitter_lat, 6),
-        "lon": round(laptop_loc["lon"] + jitter_lon, 6),
+        "lng": lon_val,
+        "lon": lon_val,
         "source": laptop_loc["source"]
     }
