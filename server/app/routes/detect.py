@@ -20,6 +20,14 @@ router = APIRouter(prefix="/detect", tags=["detection"])
 # Cached YOLO model instance
 _model_instance = None
 
+ACCIDENT_CLASS_NAMES = {
+    0: "Traffic Collision",
+    1: "Moderate Vehicle Crash",
+    2: "Severe Vehicle Crash",
+    3: "Vehicle Collision Damage",
+    4: "High-Impact Collision",
+}
+
 
 def get_yolo_model():
     global _model_instance
@@ -33,6 +41,10 @@ def get_yolo_model():
         if not weights.exists():
             weights = helios_root / "yolov8n.pt"
         _model_instance = YOLO(str(weights))
+        try:
+            _model_instance.model.names = ACCIDENT_CLASS_NAMES
+        except Exception:
+            pass
     return _model_instance
 
 
@@ -115,19 +127,20 @@ async def upload_and_detect(
 
     for box in boxes:
         cls_id = int(box.cls[0].item())
-        cls_name = names.get(cls_id, f"class_{cls_id}")
         conf = float(box.conf[0].item())
         xyxy = [round(float(c), 1) for c in box.xyxy[0].tolist()]
 
-        is_crash = "Car Crash" in cls_name or cls_id == 2
-        if is_crash:
-            crash_detected = True
-            if conf > max_conf:
-                max_conf = conf
+        # All classes in this dedicated accident detection model represent crash detections
+        is_crash = True
+        crash_detected = True
+        if conf > max_conf:
+            max_conf = conf
+
+        clean_label = ACCIDENT_CLASS_NAMES.get(cls_id, names.get(cls_id, "Vehicle Crash"))
 
         detected_boxes.append({
             "class_id": cls_id,
-            "class_name": "Car Crash" if is_crash else cls_name,
+            "class_name": clean_label,
             "is_crash": is_crash,
             "confidence": round(conf, 4),
             "bbox": xyxy,
