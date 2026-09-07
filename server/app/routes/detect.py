@@ -213,3 +213,129 @@ async def upload_and_detect(
         ),
     }
 
+# ─────────────────────────────────────────────────────────
+#  POTHOLE MODEL – Real YOLOv8 Inference on Uploaded Image
+# ─────────────────────────────────────────────────────────
+
+_pothole_model = None
+
+
+def get_pothole_model():
+    global _pothole_model
+    if _pothole_model is None:
+        helios_root = Path(__file__).resolve().parents[3]
+        weights = helios_root / "ai_models" / "pothole" / "weights" / "best.pt"
+        if not weights.exists():
+            raise FileNotFoundError(f"Pothole model weights not found: {weights}")
+        _pothole_model = YOLO(str(weights))
+    return _pothole_model
+
+
+@router.post("/pothole/upload")
+async def upload_and_detect_pothole(
+    file: UploadFile = File(...),
+    bus_id: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload an image for AI pothole detection using the trained YOLOv8 pothole
+    model. Runs real inference, saves annotated output, creates a DB incident,
+    and broadcasts via WebSocket.
+    """
+    try:
+        content = await file.read()
+        image = Image.open(io.BytesIO(content)).convert("RGB")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {e}")
+
+    start_time = time.time()
+    model = get_pothole_model()
+    results = model.predict(source=image, imgsz=640, conf=0.25, verbose=False)
+    latency_ms = round((time.time() - start_time) * 1000, 1)
+
+    result = results[0]
+    boxes = result.boxes
+
+    pothole_detected = False
+    max_conf = 0.0
+    detected_boxes: List[Dict[str, Any]] = []
+
+    if boxes is not None:
+        for box in boxes:
+            cls_id = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            xyxy = [round(float(c), 1) for c in box.xyxy[0].tolist()]
+
+            pothole_detected = True
+            if conf > max_conf:
+                max_conf = conf
+
+            detected_boxes.append({
+                "class_id": cls_id,
+                "class_name": "pothole",
+                "confidence": round(conf, 4),
+                "bbox": xyxy,
+            })
+
+    # Save annotated media
+    helios_root = Path(__file__).resolve().parents[3]
+    media_dir = helios_root / "server" / "media"
+    os.makedirs(media_dir, exist_ok=True)
+
+    timestamp = int(time.time())
+    output_filename = f"pothole_{timestamp}.jpg"
+    output_path = media_dir / output_filename
+
+    annotated_bgr = result.plot()
+    annotated_rgb = annotated_bgr[..., ::-1]
+    annotated_img = Image.fromarray(annotated_rgb)
+    annotated_img.save(str(output_path))
+
+    image_url = f"http://localhost:8000/media/{output_filename}"
+
+    # Severity from confidence
+    if max_conf >= 0.90:
+        severity = "critical"
+    elif max_conf >= 0.75:
+        severity = "high"
+    elif max_conf >= 0.50:
+        severity = "medium"
+    else:
+        severity = "low"
+
+    incident_response = None
+    target_bus = bus_id or f"BUS-HYD-{random.randint(100, 999)}"
+
+    if pothole_detected:
+        payload = IncidentCreate(
+            bus_id=target_bus,
+            event_type="pothole",
+            confidence=round(max_conf, 4),
+            severity=severity,
+            gps={"lat": 17.4430, "lng": 78.3850},
+            camera="front",
+            image_url=image_url,
+            model="pothole-yolo-v8",
+            status="detected",
+            notes=f"Pothole detected in uploaded image '{file.filename}' "
+                  f"(Confidence: {max_conf:.1%})",
+        )
+        incident_response = await create_incident(payload, db)
+        await manager.broadcast("incident_created", incident_response.dict())
+
+    return {
+        "success": True,
+        "detected": pothole_detected,
+        "confidence": round(max_conf, 4),
+        "severity": severity,
+        "latency_ms": latency_ms,
+        "boxes": detected_boxes,
+        "image_url": image_url if pothole_detected else None,
+        "bus_id": target_bus,
+        "incident": incident_response.dict() if incident_response else None,
+        "message": (
+            f"Pothole detected with {max_conf:.1%} confidence! Incident created."
+            if pothole_detected
+            else "No pothole detected in this image."
+        ),
+    }
