@@ -37,7 +37,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
 export const TopNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isConnected } = useHeliosWebSocket();
+  const { isConnected, subscribe } = useHeliosWebSocket();
   const { user, logout } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,7 +54,7 @@ export const TopNav: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch notifications
+  // Fetch notifications & subscribe to live notifications
   useEffect(() => {
     const loadNotifs = async () => {
       try {
@@ -65,7 +65,15 @@ export const TopNav: React.FC = () => {
       }
     };
     loadNotifs();
-  }, []);
+
+    const unsub = subscribe("notification_created", (newNotif: Notification) => {
+      setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 6));
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [subscribe]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

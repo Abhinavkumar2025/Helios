@@ -18,9 +18,11 @@ import {
   updateIncident,
   deleteIncident,
 } from "../services/incidents";
+import { useHeliosWebSocket } from "../context/WebSocketContext";
 import { Incident } from "../types";
 
 export const Potholes: React.FC = () => {
+  const { subscribe } = useHeliosWebSocket();
   const [potholes, setPotholes] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPothole, setSelectedPothole] = useState<Incident | null>(null);
@@ -45,7 +47,32 @@ export const Potholes: React.FC = () => {
 
   useEffect(() => {
     loadPotholes();
-  }, []);
+
+    const unsubNew = subscribe("incident_created", (newInc: Incident) => {
+      if (newInc && newInc.event_type === "pothole") {
+        setPotholes((prev) => {
+          if (prev.some((p) => p.id === newInc.id)) return prev;
+          return [newInc, ...prev];
+        });
+      }
+    });
+
+    const unsubUpd = subscribe("incident_updated", (updInc: Incident) => {
+      if (updInc && updInc.event_type === "pothole") {
+        setPotholes((prev) =>
+          prev.map((p) => (p.id === updInc.id ? { ...p, ...updInc } : p))
+        );
+        if (selectedPothole?.id === updInc.id) {
+          setSelectedPothole((prev) => (prev ? { ...prev, ...updInc } : null));
+        }
+      }
+    });
+
+    return () => {
+      unsubNew();
+      unsubUpd();
+    };
+  }, [subscribe]);
 
   const handleResolve = async (id: string) => {
     try {

@@ -94,3 +94,133 @@ export async function uploadAndDetectImage(
   return response.json();
 }
 
+
+// ─── Pothole AI Upload ───────────────────────────────────
+
+export interface PotholeUploadResponse {
+  success: boolean;
+  detected: boolean;
+  confidence: number;
+  severity: string;
+  latency_ms: number;
+  boxes: Array<{
+    class_id: number;
+    class_name: string;
+    confidence: number;
+    bbox: number[];
+  }>;
+  image_url: string;
+  bus_id: string;
+  incident?: Incident;
+  message: string;
+}
+
+export async function uploadAndDetectPothole(
+  file: File,
+  busId?: string
+): Promise<PotholeUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/pothole/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Pothole detection failed");
+  }
+
+  return response.json();
+}
+
+
+// ─── Waterlogging AI Upload ──────────────────────────────
+
+export interface WaterloggingUploadResponse {
+  success: boolean;
+  detected: boolean;
+  confidence: number;
+  severity: string;
+  severity_title: string;
+  road_coverage_pct: number;
+  water_hazard_score: number;
+  needs_alert: boolean;
+  latency_ms: number;
+  image_url: string;
+  bus_id: string;
+  incident?: Incident;
+  message: string;
+}
+
+export async function uploadAndDetectWaterlogging(
+  file: File,
+  busId?: string
+): Promise<WaterloggingUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/waterlogging/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Waterlogging detection failed");
+  }
+
+  return response.json();
+}
+
+
+// ─── Traffic / Vehicle AI Upload ─────────────────────────
+
+export interface TrafficUploadResponse {
+  success: boolean;
+  vehicles_detected: number;
+  density_pct: number;
+  total_pcu: number;
+  congestion_status: string;
+  severity: string;
+  breakdown: Record<string, number>;
+  latency_ms: number;
+  boxes: Array<{
+    class_id: number;
+    class_name: string;
+    confidence: number;
+    bbox: number[];
+  }>;
+  image_url: string;
+  bus_id: string;
+  incident?: Incident;
+  message: string;
+}
+
+export async function uploadAndDetectTraffic(
+  file: File,
+  busId?: string
+): Promise<TrafficUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (busId) formData.append("bus_id", busId);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/traffic/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Traffic detection failed");
+  }
+
+  return response.json();
+}
+

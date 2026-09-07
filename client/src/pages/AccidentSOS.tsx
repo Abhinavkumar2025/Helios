@@ -52,7 +52,14 @@ export const AccidentSOS: React.FC = () => {
 
     const unsubSOS = subscribe("sos_created", (newSOS: SOSEvent) => {
       setSosEvents((prev) => {
-        if (prev.some((e) => e.id === newSOS.id)) return prev;
+        const existingIdx = prev.findIndex(
+          (e) => e.id === newSOS.id || (newSOS.incident_id && e.incident_id === newSOS.incident_id)
+        );
+        if (existingIdx !== -1) {
+          const updated = [...prev];
+          updated[existingIdx] = { ...updated[existingIdx], ...newSOS };
+          return updated;
+        }
         return [newSOS, ...prev];
       });
     });
@@ -61,18 +68,26 @@ export const AccidentSOS: React.FC = () => {
       if (!data) return;
       const inc: Incident = data.incident || data;
       if (inc && (inc.event_type === "accident" || data.event_type === "accident")) {
+        const incId = inc.id || data.incident_id;
+        if (!incId) return;
+
         setSosEvents((prev) => {
           const exists = prev.some(
-            (e) => e.incident_id === inc.id || e.id === inc.id || e.incident?.id === inc.id
+            (e) => e.incident_id === incId || e.id === incId || e.incident?.id === incId
           );
-          if (exists) return prev;
+          if (exists) {
+            return prev.map((e) =>
+              e.incident_id === incId || e.id === incId ? { ...e, incident: inc } : e
+            );
+          }
+
           const newSOS: SOSEvent = {
-            id: inc.id?.startsWith("SOS-")
-              ? inc.id
-              : `SOS-${inc.id?.replace(/^INC-/, "") || Math.floor(1000 + Math.random() * 9000)}`,
-            incident_id: inc.id || `INC-${Math.floor(1000 + Math.random() * 9000)}`,
-            bus_id: inc.bus_id || "BUS-UNKNOWN",
-            severity: inc.severity || "high",
+            id: incId.startsWith("SOS-")
+              ? incId
+              : `SOS-${incId.replace(/^INC-/, "")}`,
+            incident_id: incId,
+            bus_id: inc.bus_id || data.bus_id || "BUS-UNKNOWN",
+            severity: inc.severity || data.severity || "high",
             status: "SENT",
             dispatched_ambulance: false,
             notified_police: false,

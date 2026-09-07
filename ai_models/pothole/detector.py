@@ -2,7 +2,7 @@ from pathlib import Path
 from ultralytics import YOLO
 
 
-MODEL_PATH = Path(__file__).parent / "best.pt"
+MODEL_PATH = Path(__file__).parent / "weights" / "best.pt"
 
 IMG_SIZE = 640
 CONF_THRESHOLD = 0.25

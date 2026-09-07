@@ -1,7 +1,10 @@
+import os
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "sqlite:///./helios.db"
+DB_PATH = Path(__file__).resolve().parent.parent.parent / "helios.db"
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH.as_posix()}")
 
 engine = create_engine(
     DATABASE_URL,
