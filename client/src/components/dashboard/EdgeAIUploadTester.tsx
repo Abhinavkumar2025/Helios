@@ -83,6 +83,20 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
     }
   };
 
+  const formatBoxName = (name: string) => {
+    if (!name) return "Vehicle Collision";
+    if (
+      name.includes("collaborate") ||
+      name.includes("Roboflow") ||
+      name.includes("dataset") ||
+      name === "-" ||
+      name.startsWith("class_")
+    ) {
+      return "Vehicle Collision";
+    }
+    return name;
+  };
+
   return (
     <Card
       title="Edge AI Live Model Verification & Custom Image Lab"
@@ -210,14 +224,20 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
           {result ? (
             <div className="space-y-3.5">
               {/* Status Header */}
-              <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl bg-helios-850 border border-slate-800 font-mono">
+              <div
+                className={`flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl font-mono border transition-all ${
+                  result.detected
+                    ? "bg-red-950/40 border-red-500/50 shadow-glow-emergency"
+                    : "bg-helios-850 border-slate-800"
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <div
                     className={`w-3 h-3 rounded-full ${
                       result.detected ? "bg-red-500 animate-ping" : "bg-emerald-400"
                     }`}
                   />
-                  <span className="text-xs font-bold text-white">
+                  <span className={`text-xs font-bold ${result.detected ? "text-red-200" : "text-white"}`}>
                     {result.detected ? "ACCIDENT DETECTED!" : "NO ACCIDENT DETECTED"}
                   </span>
                 </div>
@@ -246,54 +266,75 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                   <Layers className="w-3 h-3" />
                   YOLO Bounding Box Overlay Active
                 </div>
+                {result.detected && (
+                  <div className="absolute top-2 right-2 bg-red-600/90 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono text-white font-bold border border-red-400/40 flex items-center gap-1.5 animate-pulse">
+                    <ShieldAlert className="w-3 h-3" />
+                    EMERGENCY DETECTED
+                  </div>
+                )}
               </div>
 
               {/* Detections Breakdown */}
-              <div className="p-3.5 rounded-xl bg-helios-850/60 border border-slate-800 space-y-2 font-mono text-xs">
-                <div className="text-[10px] uppercase text-slate-400 font-bold">
-                  Detected Classes ({result.boxes.length} found):
+              <div className="p-3.5 rounded-xl bg-helios-850/60 border border-slate-800 space-y-2.5 font-mono text-xs">
+                <div className="flex items-center justify-between text-[10px] uppercase text-slate-400 font-bold">
+                  <span>Detected Classes ({result.boxes.length} found):</span>
+                  {result.detected && (
+                    <span className="text-red-400 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" />
+                      Live Incident Created
+                    </span>
+                  )}
                 </div>
                 {result.boxes.length === 0 ? (
                   <div className="text-slate-500 text-[11px]">No bounding boxes found.</div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {result.boxes.map((box, idx) => (
-                      <span
-                        key={idx}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] border font-bold flex items-center gap-1 ${
-                          box.is_crash
-                            ? "bg-red-500/20 text-red-300 border-red-500/40"
-                            : "bg-slate-800 text-slate-300 border-slate-700"
-                        }`}
-                      >
-                        {box.is_crash ? (
-                          <ShieldAlert className="w-3 h-3 text-red-400" />
-                        ) : (
-                          <FileImage className="w-3 h-3 text-slate-400" />
-                        )}
-                        {box.class_name}: {Math.round(box.confidence * 100)}%
-                      </span>
-                    ))}
+                    {result.boxes.map((box, idx) => {
+                      const cleanName = formatBoxName(box.class_name);
+                      return (
+                        <span
+                          key={idx}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] border font-bold flex items-center gap-1.5 transition-colors ${
+                            box.is_crash || result.detected
+                              ? "bg-red-500/20 text-red-200 border-red-500/40"
+                              : "bg-slate-800 text-slate-300 border-slate-700"
+                          }`}
+                        >
+                          <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                          <span>{cleanName}:</span>
+                          <span className="text-solar-400">{Math.round(box.confidence * 100)}%</span>
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
               {/* Action row */}
               {result.incident && (
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] font-mono text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 font-mono text-xs">
+                  <span className="text-[11px] text-slate-400">
                     Incident ID: <strong className="text-white">{result.incident.id}</strong> (Bus: {result.bus_id})
                   </span>
 
-                  {onOpenDossier && (
-                    <button
-                      onClick={() => onOpenDossier(result.incident!)}
-                      className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-glow-emergency transition-all cursor-pointer"
+                  <div className="flex items-center gap-2">
+                    <a
+                      href="/accidents"
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1 border border-slate-700 transition-colors cursor-pointer"
                     >
-                      <ShieldAlert className="w-4 h-4" />
-                      Open Emergency Dossier
-                    </button>
-                  )}
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      View on Dashboard
+                    </a>
+                    {onOpenDossier && (
+                      <button
+                        onClick={() => onOpenDossier(result.incident!)}
+                        className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-glow-emergency transition-all cursor-pointer"
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5" />
+                        Open Emergency Dossier
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

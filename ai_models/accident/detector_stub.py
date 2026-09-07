@@ -94,11 +94,10 @@ class JetsonAccidentDetector:
                 cls_name = names.get(cls_id, "")
                 conf = float(box.conf[0].item())
 
-                # Check exact class name or crash identifier
-                if cls_name == self.target_class_name or "Car Crash" in cls_name:
-                    crash_boxes_count += 1
-                    if conf > raw_confidence:
-                        raw_confidence = conf
+                # All detection classes in this dedicated accident model represent crash detections
+                crash_boxes_count += 1
+                if conf > raw_confidence:
+                    raw_confidence = conf
 
         confidence = raw_confidence
         self.last_raw_confidence = raw_confidence
