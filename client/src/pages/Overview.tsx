@@ -74,10 +74,10 @@ export const Overview: React.FC = () => {
       setSelectedDossier((prev) =>
         prev
           ? {
-              ...prev,
-              status: "AMBULANCE_DISPATCHED",
-              dispatched_ambulance: true,
-            }
+            ...prev,
+            status: "AMBULANCE_DISPATCHED",
+            dispatched_ambulance: true,
+          }
           : null
       );
     } catch (err: any) {
@@ -90,10 +90,10 @@ export const Overview: React.FC = () => {
     setSelectedDossier((prev) =>
       prev
         ? {
-            ...prev,
-            status: "POLICE_NOTIFIED",
-            notified_police: true,
-          }
+          ...prev,
+          status: "POLICE_NOTIFIED",
+          notified_police: true,
+        }
         : null
     );
   };
@@ -281,7 +281,7 @@ export const Overview: React.FC = () => {
           icon={<Droplets className="w-5 h-5" />}
           // trend="Monsoon monitoring"
           trendUp={true}
-          color="cyan"
+          color="purple"
         />
         <StatCard
           label="Traffic Events"
@@ -374,13 +374,12 @@ export const Overview: React.FC = () => {
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className={`w-2 h-2 rounded-full shrink-0 ${
-                          bus.status === "online"
+                        className={`w-2 h-2 rounded-full shrink-0 ${bus.status === "online"
                             ? "bg-emerald-400"
                             : bus.status === "warning"
-                            ? "bg-red-400 animate-ping"
-                            : "bg-slate-500"
-                        }`}
+                              ? "bg-red-400 animate-ping"
+                              : "bg-slate-500"
+                          }`}
                       />
                       <div className="min-w-0">
                         <div className="text-xs font-bold font-mono text-slate-200 truncate">
@@ -481,11 +480,10 @@ export const Overview: React.FC = () => {
                             navigate(`/incidents?search=${inc.id}`);
                           }
                         }}
-                        className={`p-1.5 rounded transition-colors ${
-                          inc.event_type === "accident"
+                        className={`p-1.5 rounded transition-colors ${inc.event_type === "accident"
                             ? "text-red-400 hover:text-red-300 hover:bg-red-500/20"
                             : "text-slate-400 hover:text-solar-400 hover:bg-slate-800/60"
-                        }`}
+                          }`}
                         title={inc.event_type === "accident" ? "Open Emergency Dossier" : "View Details"}
                       >
                         {inc.event_type === "accident" ? (
@@ -655,11 +653,10 @@ export const Overview: React.FC = () => {
               <button
                 onClick={handleDispatchAmbulance}
                 disabled={selectedDossier.dispatched_ambulance}
-                className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedDossier.dispatched_ambulance
+                className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${selectedDossier.dispatched_ambulance
                     ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
                     : "bg-red-600 hover:bg-red-500 text-white shadow-glow-emergency"
-                }`}
+                  }`}
               >
                 <Ambulance className="w-3.5 h-3.5" />
                 Dispatch Ambulance
@@ -668,11 +665,10 @@ export const Overview: React.FC = () => {
               <button
                 onClick={handleNotifyPolice}
                 disabled={selectedDossier.notified_police}
-                className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedDossier.notified_police
+                className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${selectedDossier.notified_police
                     ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-500 text-white"
-                }`}
+                  }`}
               >
                 <PhoneCall className="w-3.5 h-3.5" />
                 Notify Police

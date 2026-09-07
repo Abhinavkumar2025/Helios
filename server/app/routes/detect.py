@@ -460,9 +460,9 @@ async def upload_and_detect_waterlogging(
     output_filename = f"waterlog_{timestamp}.jpg"
     output_path = media_dir / output_filename
 
-    # Overlay water mask on image
+    # Overlay water mask on image in green
     overlay = image_np.copy()
-    overlay[full_mask == 1] = [255, 191, 0]  # Amber waterlogging overlay
+    overlay[full_mask == 1] = [34, 197, 94]  # Green waterlogging overlay (RGB)
     annotated = cv2.addWeighted(overlay, 0.45, image_np, 0.55, 0)
     annotated_img = Image.fromarray(annotated)
     annotated_img.save(str(output_path))

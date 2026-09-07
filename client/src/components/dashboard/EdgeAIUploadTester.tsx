@@ -68,7 +68,7 @@ const MODELS: ModelMeta[] = [
     tag: "Flood Mask",
     desc: "YOLOv8 Instance Segmentation for road water coverage % & flood hazard scoring",
     icon: Droplets,
-    activeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/50",
+    activeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50",
   },
   {
     id: "traffic",
@@ -77,7 +77,7 @@ const MODELS: ModelMeta[] = [
     tag: "Vehicle Flow",
     desc: "Multi-class vehicle counting (Car, Bus, Truck, Bike) & PCU congestion density engine",
     icon: Car,
-    activeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/50",
+    activeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/50",
   },
 ];
 
@@ -328,15 +328,15 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
           {selectedModel === "waterlogging" && (
             <div className="p-3 rounded-xl bg-helios-850/80 border border-slate-800 flex items-center justify-between font-mono text-xs">
               <div>
-                <div className="font-bold text-cyan-300 flex items-center gap-1.5">
-                  <Droplets className="w-3.5 h-3.5 text-cyan-400" />
+                <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                  <Droplets className="w-3.5 h-3.5 text-emerald-400" />
                   Instance Segmentation ROI
                 </div>
                 <div className="text-[10px] text-slate-400">
-                  Road surface polygon mask + amber overlay + flood hazard score
+                  Road surface polygon mask + green overlay + flood hazard score
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-md text-[10px] font-bold font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              <span className="px-2.5 py-1 rounded-md text-[10px] font-bold font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 ACTIVE
               </span>
             </div>
@@ -593,7 +593,7 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                     <div className="flex items-center gap-2">
                       <div
                         className={`w-3 h-3 rounded-full ${
-                          waterlogResult.detected ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"
+                          waterlogResult.detected ? "bg-emerald-400 animate-pulse" : "bg-emerald-400"
                         }`}
                       />
                       <span className="text-xs font-bold text-white">
@@ -604,10 +604,10 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                     </div>
 
                     <div className="flex items-center gap-2 text-xs">
-                      <Badge variant={waterlogResult.detected ? "info" : "neutral"} size="sm">
+                      <Badge variant={waterlogResult.detected ? "success" : "neutral"} size="sm">
                         {waterlogResult.severity.toUpperCase()}
                       </Badge>
-                      <span className="text-[11px] text-cyan-400 font-bold">
+                      <span className="text-[11px] text-emerald-400 font-bold">
                         Coverage: {waterlogResult.road_coverage_pct}%
                       </span>
                       <span className="text-[10px] text-slate-400">
@@ -622,7 +622,7 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                       alt="Waterlogging Segmentation Result"
                       className="w-full h-full object-contain"
                     />
-                    <div className="absolute top-2 left-2 bg-helios-950/80 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono text-cyan-400 border border-cyan-500/30 flex items-center gap-1.5">
+                    <div className="absolute top-2 left-2 bg-helios-950/80 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
                       <Droplets className="w-3 h-3" />
                       YOLOv8-Seg Waterlogging Mask Active
                     </div>
@@ -634,12 +634,12 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                         <div className="text-[10px] uppercase text-slate-400 font-bold mb-1">
                           Road Water Coverage
                         </div>
-                        <div className="text-base font-bold text-cyan-400">
+                        <div className="text-base font-bold text-emerald-400">
                           {waterlogResult.road_coverage_pct}%
                         </div>
                         <div className="w-full bg-slate-800 rounded-full h-1.5 mt-1.5 overflow-hidden">
                           <div
-                            className="bg-cyan-500 h-full rounded-full transition-all duration-500"
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                             style={{ width: `${Math.min(100, waterlogResult.road_coverage_pct * 2)}%` }}
                           />
                         </div>
@@ -659,7 +659,7 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                                 ? "bg-red-500"
                                 : waterlogResult.water_hazard_score > 30
                                 ? "bg-amber-500"
-                                : "bg-cyan-500"
+                                : "bg-emerald-500"
                             }`}
                             style={{ width: `${Math.min(100, waterlogResult.water_hazard_score)}%` }}
                           />
@@ -682,7 +682,7 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                       <span>
                         Incident ID: <strong className="text-white">{waterlogResult.incident.id}</strong> (Bus: {waterlogResult.bus_id})
                       </span>
-                      <span className="text-cyan-400 font-bold">Broadcast via WebSocket</span>
+                      <span className="text-emerald-400 font-bold">Broadcast via WebSocket</span>
                     </div>
                   )}
                 </>
