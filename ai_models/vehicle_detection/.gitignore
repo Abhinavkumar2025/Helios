@@ -1,0 +1,12 @@
+# Media & Assets
+test_media/
+test_media/*
+
+# Pipeline outputs & recordings
+outputs/
+outputs/*
+*.mp4
+*.avi
+
+# Dependencies
+requirements.txt

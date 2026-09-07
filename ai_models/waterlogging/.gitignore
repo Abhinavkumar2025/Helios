@@ -1,0 +1,13 @@
+# Waterlogging dependencies & test assets
+requirements.txt
+test_media/
+waterlog_outputs/
+waterlog_live_outputs/
+
+# Output directories & video artifacts
+dashcam_all_processed_frames/
+dashcam_clean_outputs/
+dashcam_global_best_incident/
+dashcam_telemetry_dedup/
+*.mp4
+*.avi
