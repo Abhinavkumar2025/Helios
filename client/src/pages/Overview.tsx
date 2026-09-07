@@ -326,7 +326,7 @@ export const Overview: React.FC = () => {
                   <Bus className="w-6 h-6" />
                 </div>
                 <h4 className="text-base font-bold font-mono text-white">
-                  Active Electric Buses Monitoring Hyderabad Corridors
+                  18 Active Electric Buses Monitoring Hyderabad Corridors
                 </h4>
                 <p className="text-xs text-slate-400">
                   Real-time GPS updates, road cracks, waterlogging spots, and traffic bottlenecks mapped across Hitec City, Gachibowli, Jubilee Hills, and Airport Express.
