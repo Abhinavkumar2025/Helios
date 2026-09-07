@@ -1,9 +1,10 @@
-﻿from roboflow import Roboflow
+﻿# pyrefly: ignore [missing-import]
+from roboflow import Roboflow
 
 # Yahan apni Roboflow API key paste karna
 API_KEY = "YOUR_ROBOFLOW_API_KEY"
 
-rf = Roboflow(api_key=BF7ezb2DUvCW9wRei5lR)
+rf = Roboflow(api_key="BF7ezb2DUvCW9wRei5lR")
 
 print("[1/2] Downloading Dataset 1 (try-0tjxt)...")
 p1 = rf.workspace("try-0tjxt").project("water-logging-h74an")

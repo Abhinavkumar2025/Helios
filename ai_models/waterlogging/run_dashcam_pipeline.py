@@ -14,9 +14,11 @@ PHONE_PORT = "8080"
 STREAM_URL = f"http://{PHONE_IP}:{PHONE_PORT}/video"
 SENSORS_URL = f"http://{PHONE_IP}:{PHONE_PORT}/sensors.json"
 
-SAMPLE_INTERVAL_SEC = 5.0
-BASE_CONF_DETECTION = 0.42
-MIN_WATERLOG_AREA_PX = 8000
+TARGET_FPS = 5.0
+SAMPLE_INTERVAL_SEC = 1.0 / TARGET_FPS  # 0.20 seconds per frame (5 FPS)
+
+BASE_CONF_DETECTION = 0.35
+MIN_WATERLOG_AREA_PX = 6000
 IMG_SIZE = 640
 
 MODEL_PATH = os.path.join("weights", "waterlog_best.pt")
@@ -35,23 +37,34 @@ print("[*] Loading YOLO model...")
 model = YOLO(MODEL_PATH)
 print("[+] Model loaded successfully.")
 
+# Cache GPS so sensor polling does not throttle high-rate (5 FPS) inference
+last_known_gps = {"lat": 16.5062, "lon": 80.6480, "speed_kmh": 25.0, "source": "FALLBACK_GPS"}
+last_gps_fetch_time = 0.0
+
 def fetch_phone_gps():
+    global last_known_gps, last_gps_fetch_time
+    now = time.time()
+    # Refresh GPS at most once every 1.0s to avoid HTTP socket congestion
+    if now - last_gps_fetch_time < 1.0:
+        return last_known_gps
+
     try:
         req = urllib.request.Request(SENSORS_URL, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=1.0) as resp:
+        with urllib.request.urlopen(req, timeout=0.3) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             gps_info = data.get("gps", {}).get("data", [])
             if gps_info:
                 latest = gps_info[-1][1]
-                return {
+                last_known_gps = {
                     "lat": round(float(latest[0]), 6),
                     "lon": round(float(latest[1]), 6),
                     "speed_kmh": round(float(latest[3]) * 3.6, 1) if len(latest) > 3 and latest[3] else 25.0,
                     "source": "PHONE_HARDWARE_GPS"
                 }
+                last_gps_fetch_time = now
     except Exception:
         pass
-    return {"lat": 16.5062, "lon": 80.6480, "speed_kmh": 25.0, "source": "FALLBACK_GPS"}
+    return last_known_gps
 
 def evaluate_waterlog_hazard(road_coverage_pct, mean_conf):
     w_score = round(road_coverage_pct * mean_conf, 2)
@@ -92,7 +105,7 @@ def process_frame(frame, frame_idx):
     title, alert_lvl, w_score, rgba, cv_col, alert = evaluate_waterlog_hazard(road_coverage_pct, mean_conf)
     gps_data = fetch_phone_gps()
 
-    file_id = f"phone_frame_{int(time.time())}"
+    file_id = f"phone_frame_{int(time.time() * 1000)}"  # Milliseconds to ensure unique filenames at 5 FPS
     telemetry = {
         "frame": f"{file_id}.jpg",
         "frame_index": frame_idx,
@@ -127,13 +140,13 @@ def process_frame(frame, frame_idx):
     with open(os.path.join(OUTPUT_TELEMETRY_DIR, f"{file_id}.json"), "w") as jf:
         json.dump(telemetry, jf, indent=2)
 
-    print(f"\n[+] Processed Frame #{frame_idx} | Score: {w_score} ({title}) | GPS: {gps_data['lat']}, {gps_data['lon']}")
+    print(f"[+] Frame #{frame_idx:04d} @ 5 FPS | Score: {w_score:5.2f} ({alert_lvl}) | Latency: {latency_ms:.1f}ms")
 
 # ----------------- RECONNECTING DAEMON LOOP -----------------
-print("[*] Starting Persistent Dashcam Daemon.")
+print(f"[*] Starting Persistent Dashcam Daemon @ {TARGET_FPS} FPS.")
 print("--- CONTROLS ---")
-print(" [S]     : Toggle 5-Second Auto-Sampling (ON / OFF)")
-print(" [SPACE] : Force Capture Frame Now")
+print(" [S]     : Toggle 5 FPS Auto-Sampling (ON / OFF)")
+print(" [SPACE] : Force Capture Single Frame Now")
 print(" [Q]     : Quit Program Completely")
 
 auto_mode = True
@@ -155,30 +168,28 @@ while True:
     while True:
         ret, frame = cap.read()
         
-        # Mobile server was stopped or connection dropped
         if not ret or frame is None:
-            print("[!] Phone stream stopped. Re-entering standby waiting loop...")
+            print("[!] Phone stream dropped. Reconnecting...")
             cap.release()
             cv2.destroyAllWindows()
             time.sleep(1.5)
-            break  # Breaks inner loop, falls back to outer reconnect loop
+            break
 
         now = time.time()
         preview = frame.copy()
 
         if auto_mode:
-            countdown = max(0.0, SAMPLE_INTERVAL_SEC - (now - last_capture_time))
-            msg = f"AUTO-SAMPLING (Next in: {countdown:.1f}s) | [S] Pause"
+            msg = f"AUTO 5-FPS STREAMING ACTIVE | [S] Pause"
             color = (0, 255, 0)
         else:
-            msg = "PAUSED | [S] Resume Auto (5s) | [SPACE] Capture | [Q] Quit"
+            msg = "PAUSED | [S] Resume (5 FPS) | [SPACE] Single Shot | [Q] Quit"
             color = (0, 165, 255)
 
         cv2.rectangle(preview, (10, 10), (760, 50), (20, 20, 20), -1)
         cv2.putText(preview, msg, (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
         cv2.imshow("Phone Dashcam Viewfinder", preview)
 
-        # 5-second sampling trigger
+        # 5 FPS Trigger (fires every 0.20s)
         if auto_mode and (now - last_capture_time >= SAMPLE_INTERVAL_SEC):
             last_capture_time = now
             frame_idx += 1
@@ -188,8 +199,8 @@ while True:
         if key == ord('s') or key == ord('S'):
             auto_mode = not auto_mode
             last_capture_time = now
-            print(f"[*] Auto-Capture set to: {auto_mode}")
-        elif key == 32:  # Spacebar
+            print(f"[*] Auto-Capture toggled: {auto_mode}")
+        elif key == 32:  # Spacebar manual frame
             frame_idx += 1
             process_frame(frame, frame_idx)
         elif key == ord('q') or key == ord('Q'):

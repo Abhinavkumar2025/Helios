@@ -6,6 +6,7 @@ import json
 import glob
 import cv2
 import numpy as np
+# pyrefly: ignore [missing-import]
 import geocoder
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
