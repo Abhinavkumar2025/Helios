@@ -363,42 +363,42 @@ async def trigger_simulated_waterlogging(db: Session):
     return data
 
 
-async def trigger_simulated_bus_offline(db: Session):
-    bus = db.query(BusModel).filter(BusModel.status == "online").first()
-    if bus:
-        bus.status = "offline"
-        bus.jetson_status = "offline"
-        bus.speed = 0.0
-        db.commit()
+# async def trigger_simulated_bus_offline(db: Session):
+#     bus = db.query(BusModel).filter(BusModel.status == "online").first()
+#     if bus:
+#         bus.status = "offline"
+#         bus.jetson_status = "offline"
+#         bus.speed = 0.0
+#         db.commit()
 
-        await manager.broadcast("bus_updated", {
-            "id": bus.id,
-            "status": "offline",
-            "jetson_status": "offline",
-            "speed": 0.0
-        })
+#         await manager.broadcast("bus_updated", {
+#             "id": bus.id,
+#             "status": "offline",
+#             "jetson_status": "offline",
+#             "speed": 0.0
+#         })
 
-        notif = NotificationModel(
-            id=f"NOTIF-{random.randint(500, 999)}",
-            title=f"Bus Telemetry Lost: {bus.id}",
-            message=f"Jetson Nano edge node on {bus.id} went offline. Camera streams suspended.",
-            category="warning",
-            link="/buses",
-            read=False,
-            created_at=datetime.utcnow()
-        )
-        db.add(notif)
-        db.commit()
+#         notif = NotificationModel(
+#             id=f"NOTIF-{random.randint(500, 999)}",
+#             title=f"Bus Telemetry Lost: {bus.id}",
+#             message=f"Jetson Nano edge node on {bus.id} went offline. Camera streams suspended.",
+#             category="warning",
+#             link="/buses",
+#             read=False,
+#             created_at=datetime.utcnow()
+#         )
+#         db.add(notif)
+#         db.commit()
 
-        await manager.broadcast("notification_created", {
-            "id": notif.id,
-            "title": notif.title,
-            "message": notif.message,
-            "category": notif.category,
-            "link": notif.link,
-            "read": notif.read,
-            "created_at": notif.created_at.isoformat()
-        })
+#         await manager.broadcast("notification_created", {
+#             "id": notif.id,
+#             "title": notif.title,
+#             "message": notif.message,
+#             "category": notif.category,
+#             "link": notif.link,
+#             "read": notif.read,
+#             "created_at": notif.created_at.isoformat()
+#         })
 
-        return {"bus_id": bus.id, "status": "offline"}
-    return {"message": "No online bus found to toggle"}
+#         return {"bus_id": bus.id, "status": "offline"}
+#     return {"message": "No online bus found to toggle"}

@@ -119,7 +119,7 @@ const loadInitialData = async () => {
 try {
 const [busData, incData] = await Promise.all([
 fetchBuses(),
-fetchIncidents({ limit: 120 }),
+fetchIncidents({ limit: 500 }),
 ]);
 setBuses(busData);
 setIncidents(incData);
