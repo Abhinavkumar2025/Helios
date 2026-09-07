@@ -1,5 +1,5 @@
-D:\DIVY\Hackathon\SIH\waterlog_project\Helios\ai_models\roadinfra\road_signs\datasets
-D:\DIVY\Hackathon\SIH\waterlog_project\Helios\ai_models\roadinfra\road_signs\test_media
-D:\DIVY\Hackathon\SIH\waterlog_project\Helios\ai_models\roadinfra\road_signs\test_media_outputs
-D:\DIVY\Hackathon\SIH\waterlog_project\Helios\ai_models\roadinfra\road_signs\README.dataset.txt
-D:\DIVY\Hackathon\SIH\waterlog_project\Helios\ai_models\roadinfra\road_signs\README.roboflow.txt
+datasets/
+test_media/
+test_media_outputs/
+README.dataset.txt
+README.roboflow.txt
