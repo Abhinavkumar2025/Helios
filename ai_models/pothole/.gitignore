@@ -1,0 +1,7 @@
+# Ultralytics training and prediction outputs
+runs/
+
+# Local test media assets
+test_media/
+
+outputs_pothole/
