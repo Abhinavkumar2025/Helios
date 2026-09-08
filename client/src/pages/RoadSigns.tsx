@@ -65,7 +65,7 @@ export const RoadSigns: React.FC = () => {
           label="Total Scanned Today"
           value={1840}
           icon={<Milestone className="w-5 h-5" />}
-          trend="Traffic asset OCR active"
+          trend="Traffic asset active"
           trendUp={true}
           color="solar"
         />
