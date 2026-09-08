@@ -224,3 +224,104 @@ export async function uploadAndDetectTraffic(
   return response.json();
 }
 
+
+// ═══════════════════════════════════════════════════════════
+//  VIDEO PIPELINE — Multi-Model Priority Inference
+// ═══════════════════════════════════════════════════════════
+
+export interface VideoWinner {
+  model: string;
+  frame_index: number;
+  confidence: number;
+  severity: string;
+  detected: boolean;
+  annotated_image_url?: string;
+  // Waterlogging-specific
+  coverage_pct?: number;
+  hazard_score?: number;
+  // Accident/Pothole-specific
+  detections?: number;
+}
+
+export interface VehicleSummary {
+  avg_density_pct: number;
+  avg_pcu: number;
+  total_vehicles_seen: number;
+  congestion_status: string;
+  breakdown: Record<string, number>;
+  annotated_image_url?: string;
+}
+
+export interface VideoJobStatus {
+  job_id: string;
+  status: "processing" | "completed" | "failed";
+  phase: string;
+  current_model: string | null;
+  total_frames: number;
+  processed_frames: number;
+  frame_division: Record<string, number>;
+  winner: VideoWinner | null;
+  vehicle_summary: VehicleSummary | null;
+  processing_time_ms: number;
+  error: string | null;
+  bus_id: string;
+  filename: string;
+}
+
+export async function uploadVideo(file: File): Promise<{ job_id: string; status: string; message: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/video/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Video upload failed");
+  }
+
+  return response.json();
+}
+
+export function streamVideoStatus(
+  jobId: string,
+  onUpdate: (data: VideoJobStatus) => void,
+  onError?: (err: Event) => void
+): EventSource {
+  const baseUrl = getApiBaseUrl();
+  const es = new EventSource(`${baseUrl}/detect/video/status/${jobId}`);
+
+  es.onmessage = (event) => {
+    try {
+      const data: VideoJobStatus = JSON.parse(event.data);
+      onUpdate(data);
+      if (data.status === "completed" || data.status === "failed") {
+        es.close();
+      }
+    } catch {
+      // Ignore malformed SSE
+    }
+  };
+
+  es.onerror = (err) => {
+    if (onError) onError(err);
+    es.close();
+  };
+
+  return es;
+}
+
+export async function getVideoResult(jobId: string): Promise<VideoJobStatus> {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}/detect/video/result/${jobId}`);
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || "Failed to get video result");
+  }
+
+  return response.json();
+}
