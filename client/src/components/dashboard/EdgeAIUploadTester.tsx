@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   UploadCloud,
   Cpu,
@@ -15,6 +15,12 @@ import {
   Activity,
   Radio,
   ExternalLink,
+  Video,
+  Play,
+  Loader2,
+  Trophy,
+  BarChart3,
+  Clock,
 } from "lucide-react";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
@@ -23,10 +29,14 @@ import {
   uploadAndDetectPothole,
   uploadAndDetectWaterlogging,
   uploadAndDetectTraffic,
+  uploadVideo,
+  streamVideoStatus,
+  getVideoResult,
   DetectUploadResponse,
   PotholeUploadResponse,
   WaterloggingUploadResponse,
   TrafficUploadResponse,
+  VideoJobStatus,
 } from "../../services/incidents";
 import { Incident } from "../../types";
 
@@ -104,6 +114,15 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [boostDecel, setBoostDecel] = useState(true);
+
+  // ── Video Pipeline State ──
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewName, setVideoPreviewName] = useState<string | null>(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [videoJob, setVideoJob] = useState<VideoJobStatus | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -191,6 +210,105 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
       : trafficResult;
 
   const currentImageUrl = currentResult?.image_url || previewUrl;
+
+  // ── Video Pipeline Handlers ──
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("video/")) {
+      setVideoFile(file);
+      setVideoPreviewName(file.name);
+      setVideoJob(null);
+      setVideoError(null);
+    }
+  };
+
+  const handleVideoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("video/")) {
+      setVideoFile(file);
+      setVideoPreviewName(file.name);
+      setVideoJob(null);
+      setVideoError(null);
+    }
+  };
+
+  const handleRunVideoPipeline = async () => {
+    if (!videoFile) return;
+    try {
+      setIsVideoUploading(true);
+      setVideoError(null);
+      setVideoJob(null);
+
+      const { job_id } = await uploadVideo(videoFile);
+
+      // Start SSE stream
+      if (eventSourceRef.current) eventSourceRef.current.close();
+
+      const es = streamVideoStatus(
+        job_id,
+        (data) => {
+          setVideoJob(data);
+          if (data.status === "completed" || data.status === "failed") {
+            setIsVideoUploading(false);
+            if (data.status === "failed") {
+              setVideoError(data.error || "Pipeline failed");
+            }
+          }
+        },
+        () => {
+          // SSE error — fallback to polling result
+          setTimeout(async () => {
+            try {
+              const result = await getVideoResult(job_id);
+              setVideoJob(result);
+            } catch {
+              setVideoError("Lost connection to pipeline");
+            } finally {
+              setIsVideoUploading(false);
+            }
+          }, 2000);
+        }
+      );
+      eventSourceRef.current = es;
+    } catch (err: any) {
+      setVideoError(err.message || "Failed to start video pipeline");
+      setIsVideoUploading(false);
+    }
+  };
+
+  // Cleanup SSE on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) eventSourceRef.current.close();
+    };
+  }, []);
+
+  const getModelDisplayName = (model: string) => {
+    const names: Record<string, string> = {
+      waterlogging: "Waterlogging / Flood",
+      accident: "Accident / SOS",
+      pothole: "Pothole Detection",
+      vehicle_detection: "Vehicle / Traffic",
+    };
+    return names[model] || model;
+  };
+
+  const getModelColor = (model: string) => {
+    const colors: Record<string, string> = {
+      waterlogging: "emerald",
+      accident: "red",
+      pothole: "amber",
+      vehicle_detection: "cyan",
+    };
+    return colors[model] || "slate";
+  };
+
+  const videoProgress = videoJob
+    ? videoJob.total_frames > 0
+      ? Math.round((videoJob.processed_frames / videoJob.total_frames) * 100)
+      : 0
+    : 0;
 
   return (
     <Card
@@ -789,6 +907,391 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/*  VIDEO PIPELINE SECTION                                    */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <div className="mt-8 pt-6 border-t border-slate-800">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center">
+              <Video className="w-4 h-4 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold font-mono text-white">Video Analysis Pipeline</h3>
+              <p className="text-[10px] text-slate-400 font-mono">Multi-model priority inference on video frames — Waterlogging → Accident → Pothole → Vehicle</p>
+            </div>
+          </div>
+          <Badge variant="solar" size="sm">
+            <BarChart3 className="w-3 h-3 mr-1" />
+            4-Model Cascade
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* ── Left: Video Upload Zone ── */}
+          <div className="lg:col-span-5 space-y-4">
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleVideoDrop}
+              onClick={() => videoInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${
+                videoPreviewName
+                  ? "border-violet-500/50 bg-helios-900/60"
+                  : "border-slate-700/80 hover:border-violet-500/60 bg-helios-850/60 hover:bg-helios-850"
+              }`}
+            >
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={handleVideoFileChange}
+              />
+
+              {videoPreviewName ? (
+                <div className="space-y-2 py-2">
+                  <div className="w-14 h-14 mx-auto rounded-xl bg-violet-500/10 border border-violet-500/30 text-violet-400 flex items-center justify-center">
+                    <Video className="w-7 h-7" />
+                  </div>
+                  <div className="text-xs font-bold font-mono text-violet-300 truncate max-w-[240px]">
+                    {videoPreviewName}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {videoFile && `${(videoFile.size / (1024 * 1024)).toFixed(1)} MB`} · Click to change
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 space-y-2.5">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center">
+                    <Video className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold font-mono text-slate-200">
+                      Upload Video for Multi-Model Analysis
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      Supports MP4, AVI, MOV, WebM (max 100 MB)
+                    </div>
+                  </div>
+                  <div className="inline-block px-3 py-1 rounded-lg bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-700">
+                    Browse from Computer
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Frame Division Info */}
+            <div className="p-3 rounded-xl bg-helios-850/80 border border-slate-800 font-mono text-xs space-y-2">
+              <div className="font-bold text-violet-300 flex items-center gap-1.5 text-[11px]">
+                <Layers className="w-3.5 h-3.5 text-violet-400" />
+                Frame Distribution Strategy
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { name: "Waterlogging", pct: "17%", color: "emerald" },
+                  { name: "Accident", pct: "33%", color: "red" },
+                  { name: "Pothole", pct: "33%", color: "amber" },
+                  { name: "Vehicle Det.", pct: "17%", color: "cyan" },
+                ].map((m) => (
+                  <div key={m.name} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-helios-900 border border-slate-800">
+                    <span className="text-[10px] text-slate-300">{m.name}</span>
+                    <span className={`text-[10px] font-bold text-${m.color}-400`}>{m.pct}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] text-slate-500 pt-1">
+                Priority: If ≥60% confidence found, lower-priority models skipped. Vehicle always runs.
+              </div>
+            </div>
+
+            {/* Run Pipeline Button */}
+            <button
+              onClick={handleRunVideoPipeline}
+              disabled={!videoFile || isVideoUploading}
+              className={`w-full py-2.5 px-4 rounded-xl font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                !videoFile
+                  ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
+                  : isVideoUploading
+                  ? "bg-violet-500/50 text-white cursor-wait"
+                  : "bg-gradient-to-r from-violet-500 via-purple-400 to-violet-500 hover:from-violet-400 hover:to-violet-500 text-white shadow-lg shadow-violet-500/20"
+              }`}
+            >
+              {isVideoUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing Video Pipeline...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  Run Video Pipeline (4-Model Cascade)
+                </>
+              )}
+            </button>
+
+            {videoError && (
+              <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{videoError}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── Right: Pipeline Progress & Results ── */}
+          <div className="lg:col-span-7 flex flex-col space-y-4">
+            {videoJob ? (
+              <div className="space-y-4">
+                {/* Progress Bar */}
+                {videoJob.status === "processing" && (
+                  <div className="p-4 rounded-xl bg-helios-850/80 border border-violet-500/30 space-y-3">
+                    <div className="flex items-center justify-between font-mono text-xs">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
+                        <span className="text-violet-300 font-bold uppercase">
+                          {videoJob.phase === "extracting_frames" && "Extracting Frames..."}
+                          {videoJob.phase === "dividing_frames" && "Dividing Frames Among Models..."}
+                          {videoJob.phase === "running_waterlogging" && "Running Waterlogging Model..."}
+                          {videoJob.phase === "running_accident" && "Running Accident Model..."}
+                          {videoJob.phase === "running_pothole" && "Running Pothole Model..."}
+                          {videoJob.phase === "running_vehicle_detection" && "Running Vehicle Detection..."}
+                          {videoJob.phase === "winner_found" && "Winner Found! Finishing..."}
+                          {videoJob.phase === "initializing" && "Initializing Pipeline..."}
+                        </span>
+                      </div>
+                      <span className="text-slate-400">
+                        {videoJob.processed_frames}/{videoJob.total_frames} frames
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-violet-500 to-purple-400 h-full rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${videoProgress}%` }}
+                      />
+                    </div>
+
+                    {/* Frame Division Display */}
+                    {Object.keys(videoJob.frame_division).length > 0 && (
+                      <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                        {Object.entries(videoJob.frame_division).map(([model, count]) => (
+                          <span
+                            key={model}
+                            className={`px-2 py-0.5 rounded-md border ${
+                              videoJob.current_model === model
+                                ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
+                                : "bg-slate-800/60 border-slate-700 text-slate-500"
+                            }`}
+                          >
+                            {model}: {count as number}f
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── WINNER CARD ── */}
+                {videoJob.status === "completed" && (
+                  <>
+                    {videoJob.winner ? (
+                      <div className={`p-4 rounded-xl border space-y-3 ${
+                        videoJob.winner.model === "waterlogging"
+                          ? "bg-emerald-950/40 border-emerald-500/50"
+                          : videoJob.winner.model === "accident"
+                          ? "bg-red-950/40 border-red-500/50 shadow-glow-emergency"
+                          : "bg-amber-950/40 border-amber-500/50"
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Trophy className={`w-5 h-5 ${
+                              videoJob.winner.model === "waterlogging" ? "text-emerald-400" :
+                              videoJob.winner.model === "accident" ? "text-red-400" : "text-amber-400"
+                            }`} />
+                            <div>
+                              <div className="text-xs font-bold font-mono text-white uppercase">
+                                {getModelDisplayName(videoJob.winner.model)} — DETECTED
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                Frame #{videoJob.winner.frame_index} · Priority Winner
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={videoJob.winner.severity === "critical" ? "danger" : "warning"} size="sm">
+                              {videoJob.winner.severity.toUpperCase()}
+                            </Badge>
+                            <span className={`text-sm font-bold font-mono ${
+                              videoJob.winner.model === "waterlogging" ? "text-emerald-400" :
+                              videoJob.winner.model === "accident" ? "text-red-400" : "text-amber-400"
+                            }`}>
+                              {Math.round(videoJob.winner.confidence * 100)}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {videoJob.winner.annotated_image_url && (
+                          <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-black aspect-video max-h-64 flex items-center justify-center">
+                            <img
+                              src={videoJob.winner.annotated_image_url}
+                              alt={`${videoJob.winner.model} Detection`}
+                              className="w-full h-full object-contain"
+                            />
+                            <div className={`absolute top-2 left-2 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono border flex items-center gap-1.5 ${
+                              videoJob.winner.model === "waterlogging"
+                                ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30"
+                                : videoJob.winner.model === "accident"
+                                ? "bg-red-950/80 text-red-400 border-red-500/30"
+                                : "bg-amber-950/80 text-amber-400 border-amber-500/30"
+                            }`}>
+                              <Trophy className="w-3 h-3" />
+                              Priority Winner Frame
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Extra metrics for waterlogging */}
+                        {videoJob.winner.model === "waterlogging" && videoJob.winner.coverage_pct !== undefined && (
+                          <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+                            <div className="p-2 rounded-lg bg-helios-900 border border-slate-800">
+                              <div className="text-[10px] text-slate-400">Road Coverage</div>
+                              <div className="text-sm font-bold text-emerald-400">{videoJob.winner.coverage_pct}%</div>
+                            </div>
+                            <div className="p-2 rounded-lg bg-helios-900 border border-slate-800">
+                              <div className="text-[10px] text-slate-400">Hazard Score</div>
+                              <div className="text-sm font-bold text-white">{videoJob.winner.hazard_score}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-helios-850 border border-emerald-500/30 flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        <div>
+                          <div className="text-xs font-bold font-mono text-emerald-300">ROAD CLEAR — No Hazard Detected</div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            No model triggered ≥60% confidence across all analyzed frames
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── VEHICLE SUMMARY (Always shown) ── */}
+                    {videoJob.vehicle_summary && (
+                      <div className="p-4 rounded-xl bg-helios-850/80 border border-cyan-500/30 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4 text-cyan-400" />
+                            <span className="text-xs font-bold font-mono text-white uppercase">Vehicle / Traffic Summary</span>
+                          </div>
+                          <span className="text-[11px] font-mono font-bold text-cyan-400">
+                            {videoJob.vehicle_summary.congestion_status}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="p-2 rounded-lg bg-helios-900 border border-slate-800 text-center">
+                            <div className="text-[10px] text-slate-400 font-mono">Avg Density</div>
+                            <div className="text-sm font-bold text-white font-mono">{videoJob.vehicle_summary.avg_density_pct}%</div>
+                          </div>
+                          <div className="p-2 rounded-lg bg-helios-900 border border-slate-800 text-center">
+                            <div className="text-[10px] text-slate-400 font-mono">Total Vehicles</div>
+                            <div className="text-sm font-bold text-white font-mono">{videoJob.vehicle_summary.total_vehicles_seen}</div>
+                          </div>
+                          <div className="p-2 rounded-lg bg-helios-900 border border-slate-800 text-center">
+                            <div className="text-[10px] text-slate-400 font-mono">Avg PCU</div>
+                            <div className="text-sm font-bold text-white font-mono">{videoJob.vehicle_summary.avg_pcu}</div>
+                          </div>
+                        </div>
+
+                        {/* Vehicle Breakdown */}
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(videoJob.vehicle_summary.breakdown || {}).map(([vType, count]) => (
+                            <div key={vType} className="px-2.5 py-1 rounded-lg bg-helios-900 border border-slate-800 text-[11px] font-mono">
+                              <span className="text-slate-400 capitalize">{vType}:</span>{" "}
+                              <span className="text-white font-bold">{count}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Density Bar */}
+                        <div>
+                          <div className="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                            <span>Congestion Index</span>
+                            <span className="text-white font-bold">{videoJob.vehicle_summary.avg_density_pct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                videoJob.vehicle_summary.avg_density_pct > 75
+                                  ? "bg-red-500"
+                                  : videoJob.vehicle_summary.avg_density_pct > 45
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
+                              }`}
+                              style={{ width: `${Math.min(100, videoJob.vehicle_summary.avg_density_pct)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {videoJob.vehicle_summary.annotated_image_url && (
+                          <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-black aspect-video max-h-48 flex items-center justify-center">
+                            <img
+                              src={videoJob.vehicle_summary.annotated_image_url}
+                              alt="Traffic Analysis"
+                              className="w-full h-full object-contain"
+                            />
+                            <div className="absolute top-2 left-2 bg-helios-950/80 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono text-cyan-400 border border-cyan-500/30 flex items-center gap-1.5">
+                              <Car className="w-3 h-3" />
+                              Peak Traffic Frame
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Processing Stats */}
+                    <div className="flex items-center justify-between font-mono text-[10px] text-slate-500 px-1">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Processed in {(videoJob.processing_time_ms / 1000).toFixed(1)}s
+                      </span>
+                      <span>{videoJob.total_frames} frames analyzed · {videoJob.filename}</span>
+                    </div>
+                  </>
+                )}
+
+                {/* Failed State */}
+                {videoJob.status === "failed" && (
+                  <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/40 flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    <div>
+                      <div className="text-xs font-bold font-mono text-red-300">PIPELINE FAILED</div>
+                      <div className="text-[10px] text-red-400/80 font-mono">{videoJob.error}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full min-h-[260px] rounded-2xl border border-slate-800/80 bg-helios-900/40 flex flex-col items-center justify-center p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center">
+                  <Video className="w-6 h-6" />
+                </div>
+                <div className="max-w-sm space-y-1">
+                  <h4 className="text-xs font-bold font-mono text-slate-300 uppercase">
+                    Awaiting Video Input
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-sans">
+                    Upload a dashcam or road surveillance video. The pipeline will extract frames and run
+                    4 AI models in priority order, returning the highest-confidence hazard detection along
+                    with full vehicle traffic analysis.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Card>

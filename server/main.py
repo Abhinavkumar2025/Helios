@@ -10,6 +10,7 @@ from app.database.session import Base, SessionLocal, engine
 from app.routes.analytics import router as analytics_router
 from app.routes.buses import router as buses_router
 from app.routes.detect import router as detect_router
+from app.routes.video_pipeline import router as video_pipeline_router
 from app.routes.gps import router as gps_router
 from app.routes.health import router as health_router
 from app.routes.incidents import router as incidents_router
@@ -87,6 +88,7 @@ app.include_router(buses_router, prefix=API_PREFIX)
 app.include_router(gps_router, prefix=API_PREFIX)
 app.include_router(incidents_router, prefix=API_PREFIX)
 app.include_router(detect_router, prefix=API_PREFIX)
+app.include_router(video_pipeline_router, prefix=API_PREFIX)
 app.include_router(sos_router, prefix=API_PREFIX)
 app.include_router(models_router, prefix=API_PREFIX)
 app.include_router(analytics_router, prefix=API_PREFIX)
