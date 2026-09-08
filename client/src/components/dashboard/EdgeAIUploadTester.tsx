@@ -55,9 +55,9 @@ const MODELS: ModelMeta[] = [
   {
     id: "pothole",
     name: "Pothole Monitor",
-    badge: "yolov8n_pothole.pt",
+    badge: "yolo26n_pothole.pt",
     tag: "Road Surface",
-    desc: "YOLOv8n road surface damage detection with bounding boxes & severity classification",
+    desc: "YOLO26n road surface damage detection with bounding boxes & severity classification",
     icon: AlertTriangle,
     activeColor: "bg-amber-500/20 text-amber-300 border-amber-500/50",
   },
@@ -316,7 +316,7 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                   Road Surface Depth Profiling
                 </div>
                 <div className="text-[10px] text-slate-400">
-                  YOLOv8 bounding box + severity threshold (Confidence &gt; 25%)
+                  YOLO26n bounding box + severity threshold (Confidence &gt; 25%)
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-md text-[10px] font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -550,7 +550,7 @@ export const EdgeAIUploadTester: React.FC<EdgeAIUploadTesterProps> = ({ onOpenDo
                     />
                     <div className="absolute top-2 left-2 bg-helios-950/80 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
                       <Layers className="w-3 h-3" />
-                      YOLOv8 Pothole Bounding Boxes Active
+                      YOLO26n Pothole Bounding Boxes Active
                     </div>
                   </div>
 

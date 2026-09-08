@@ -231,7 +231,7 @@ async def upload_and_detect(
     }
 
 # ─────────────────────────────────────────────────────────
-#  POTHOLE MODEL – Real YOLOv8 Inference on Uploaded Image
+#  POTHOLE MODEL – Real YOLO26n Inference on Uploaded Image
 # ─────────────────────────────────────────────────────────
 
 _pothole_model = None
@@ -255,7 +255,7 @@ async def upload_and_detect_pothole(
     db: Session = Depends(get_db),
 ):
     """
-    Upload an image for AI pothole detection using the trained YOLOv8 pothole
+    Upload an image for AI pothole detection using the trained YOLO26n pothole
     model. Runs real inference, saves annotated output, creates a DB incident,
     and broadcasts via WebSocket.
     """
@@ -332,7 +332,7 @@ async def upload_and_detect_pothole(
             gps={"lat": 17.4430, "lng": 78.3850},
             camera="front",
             image_url=image_url,
-            model="pothole-yolo-v8",
+            model="pothole-yolo26n",
             status="detected",
             notes=f"Pothole detected in uploaded image '{file.filename}' "
                   f"(Confidence: {max_conf:.1%})",
