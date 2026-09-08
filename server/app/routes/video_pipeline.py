@@ -25,16 +25,22 @@ import asyncio
 import io
 import json
 import os
+import tempfile
 import time
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# pyrefly: ignore [missing-import]
 import cv2
+# pyrefly: ignore [missing-import]
 import numpy as np
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+# pyrefly: ignore [missing-import]
 from fastapi.responses import StreamingResponse
+# pyrefly: ignore [missing-import]
 from PIL import Image
 
 router = APIRouter(prefix="/detect", tags=["video-pipeline"])
@@ -357,7 +363,15 @@ def _run_pipeline(job_id: str, video_path: str):
     Synchronous pipeline function run inside a thread via asyncio.to_thread.
     Updates _jobs[job_id] with progress so the SSE endpoint can stream it.
     """
-    job = _jobs[job_id]
+    job = _jobs.get(job_id)
+    if job is None:
+        # Job was lost (e.g., server reload wiped _jobs). Nothing to do.
+        try:
+            os.remove(video_path)
+        except OSError:
+            pass
+        return
+
     start = time.time()
 
     helios_root = _get_helios_root()
@@ -567,17 +581,15 @@ async def upload_video(
     if len(content) > MAX_VIDEO_BYTES:
         raise HTTPException(status_code=413, detail="Video file exceeds 100 MB limit")
 
-    # Save to temp file
-    helios_root = _get_helios_root()
-    temp_dir = helios_root / "server" / "media" / "temp_videos"
-    os.makedirs(temp_dir, exist_ok=True)
-
-    job_id = f"vid_{uuid.uuid4().hex[:12]}"
+    # Save to temp file OUTSIDE the server/ directory to avoid triggering
+    # uvicorn --reload when the video is written to disk.
     ext = Path(file.filename or "video.mp4").suffix or ".mp4"
-    temp_path = str(temp_dir / f"{job_id}{ext}")
-
-    with open(temp_path, "wb") as f:
-        f.write(content)
+    job_id = f"vid_{uuid.uuid4().hex[:12]}"
+    temp_fd, temp_path = tempfile.mkstemp(suffix=ext, prefix=f"{job_id}_")
+    try:
+        os.write(temp_fd, content)
+    finally:
+        os.close(temp_fd)
 
     # Initialize job state
     _jobs[job_id] = {
@@ -592,17 +604,17 @@ async def upload_video(
         "vehicle_summary": None,
         "processing_time_ms": 0,
         "error": None,
-        "bus_id": bus_id or f"BUS-HYD-VID",
+        "bus_id": bus_id or "BUS-HYD-VID",
         "filename": file.filename,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": time.time(),
         "completed_at": None,
     }
 
-    # Purge expired jobs
+    # Purge expired jobs (older than 30 min)
     now = time.time()
     expired = [k for k, v in _jobs.items()
-               if v.get("created_at") and
-               (now - time.mktime(time.strptime(v["created_at"], "%Y-%m-%dT%H:%M:%S.%f"))) > _JOB_TTL_SEC]
+               if isinstance(v.get("created_at"), (int, float))
+               and (now - v["created_at"]) > _JOB_TTL_SEC]
     for k in expired:
         _jobs.pop(k, None)
 
